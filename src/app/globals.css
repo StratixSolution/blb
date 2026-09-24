@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  --espresso: #1A0E08;
+  --roast: #4A2512;
+  --caramel: #8B5E3C;
+  --cream: #F7F0E6;
+  --latte: #EAD9C8;
+  --gold: #C9953C;
+  --white: #FAFAF8;
+  --border-brown: #D4C4B0;
+}
+
+@theme inline {
+  --color-espresso: var(--espresso);
+  --color-roast: var(--roast);
+  --color-caramel: var(--caramel);
+  --color-cream: var(--cream);
+  --color-latte: var(--latte);
+  --color-gold: var(--gold);
+  --color-blb-white: var(--white);
+  --color-border-brown: var(--border-brown);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-playfair);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--espresso);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--espresso);
+}

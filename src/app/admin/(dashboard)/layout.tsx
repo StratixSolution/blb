@@ -1,0 +1,46 @@
+import Link from "next/link";
+import { AdminLogout } from "./AdminLogout";
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 bg-gray-950 flex overflow-hidden">
+      <aside className="w-56 bg-gray-900 border-r border-gray-800 flex flex-col flex-shrink-0">
+        <div className="px-5 py-5 border-b border-gray-800">
+          <p className="text-white font-semibold text-sm">Bean Leaf Brew</p>
+          <p className="text-gray-500 text-xs mt-0.5">Admin Panel</p>
+        </div>
+        <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+          {[
+            { href: "/admin", label: "Dashboard" },
+            { href: "/admin/analytics", label: "Analytics" },
+            { href: "/admin/orders", label: "Orders" },
+            { href: "/admin/products", label: "Products" },
+            { href: "/admin/customers", label: "Customers" },
+            { href: "/admin/coupons", label: "Coupons" },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded transition-colors"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="px-3 py-4 border-t border-gray-800">
+          <Link
+            href="/"
+            target="_blank"
+            className="block px-3 py-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            ← View site
+          </Link>
+          <AdminLogout />
+        </div>
+      </aside>
+      <main className="flex-1 overflow-auto bg-gray-950">
+        {children}
+      </main>
+    </div>
+  );
+}
