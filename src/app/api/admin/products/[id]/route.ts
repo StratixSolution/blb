@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/adminAuth";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { products } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-async function requireAdmin() {
-  const cookieStore = await cookies();
-  return cookieStore.get("admin_session")?.value === "1";
-}
-
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const unauth = await requireAdmin();
+  if (unauth) return unauth;
 
   const { id } = await params;
   const body = await req.json();
@@ -44,7 +40,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const unauth = await requireAdmin();
+  if (unauth) return unauth;
 
   const { id } = await params;
   const [row] = await db.delete(products).where(eq(products.id, Number(id))).returning();

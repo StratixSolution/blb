@@ -2,14 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { db } from "@/db/client";
-import { orders, orderItems, customers, coupons } from "@/db/schema";
+import { orders, orderItems, customers, coupons, pendingOrders } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { esc } from "@/lib/htmlEscape";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, customer, items, couponCode, discount } = body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, customer } = body;
 
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return NextResponse.json({ error: "Missing payment fields" }, { status: 400 });
+    }
+
+    // Verify signature
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -19,13 +25,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
-    const subtotal = items.reduce(
-      (sum: number, i: { product: { price: number }; quantity: number }) =>
-        sum + i.product.price * i.quantity,
-      0
-    );
-    const appliedDiscount = Number(discount ?? 0);
-    const total = Math.max(0, subtotal - appliedDiscount);
+    // Load server-side computed order snapshot
+    const [pending] = await db
+      .select()
+      .from(pendingOrders)
+      .where(eq(pendingOrders.id, razorpay_order_id))
+      .limit(1);
+
+    if (!pending) {
+      return NextResponse.json({ error: "Order session expired. Please start a new checkout." }, { status: 400 });
+    }
+
+    const lineItems: Array<{ productId: number; productName: string; price: number; quantity: number }> =
+      JSON.parse(pending.itemsJson);
+    const total = pending.amountPaise / 100;
+    const appliedDiscount = pending.discount;
+    const couponCode = pending.couponCode;
 
     await db.insert(orders).values({
       id: razorpay_order_id,
@@ -44,11 +59,11 @@ export async function POST(req: NextRequest) {
     });
 
     await db.insert(orderItems).values(
-      items.map((i: { product: { id: number; name: string; price: number }; quantity: number }) => ({
+      lineItems.map((i) => ({
         orderId: razorpay_order_id,
-        productId: i.product.id,
-        productName: i.product.name,
-        price: i.product.price,
+        productId: i.productId,
+        productName: i.productName,
+        price: i.price,
         quantity: i.quantity,
       }))
     );
@@ -95,7 +110,10 @@ export async function POST(req: NextRequest) {
         .where(eq(coupons.code, couponCode));
     }
 
-    sendOrderConfirmation({ customer, items, orderId: razorpay_order_id, paymentId: razorpay_payment_id })
+    // Clean up pending order
+    await db.delete(pendingOrders).where(eq(pendingOrders.id, razorpay_order_id));
+
+    sendOrderConfirmation({ customer, lineItems, orderId: razorpay_order_id, paymentId: razorpay_payment_id })
       .catch((err) => console.error("Order confirmation email failed (order saved):", err));
 
     return NextResponse.json({ success: true });
@@ -107,12 +125,12 @@ export async function POST(req: NextRequest) {
 
 async function sendOrderConfirmation({
   customer,
-  items,
+  lineItems,
   orderId,
   paymentId,
 }: {
   customer: { name: string; email: string; address: string; city: string; pincode: string };
-  items: Array<{ product: { name: string; price: number }; quantity: number }>;
+  lineItems: Array<{ productName: string; price: number; quantity: number }>;
   orderId: string;
   paymentId: string;
 }) {
@@ -120,12 +138,13 @@ async function sendOrderConfirmation({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT ?? 587),
     secure: false,
+    requireTLS: true,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
 
-  const total = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const itemLines = items
-    .map((i) => `${i.product.name} x${i.quantity} - ₹${i.product.price * i.quantity}`)
+  const total = lineItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const itemLines = lineItems
+    .map((i) => `${i.productName} x${i.quantity} - ₹${i.price * i.quantity}`)
     .join("\n");
 
   await transporter.sendMail({
@@ -140,15 +159,15 @@ async function sendOrderConfirmation({
         </div>
         <div style="padding: 32px; background: #F7F0E6;">
           <h2 style="color: #4A2512;">Order Confirmed!</h2>
-          <p>Hi ${customer.name}, thank you for your order.</p>
-          <p style="color: #8B5E3C; font-size: 13px;">Order ID: ${orderId}</p>
+          <p>Hi ${esc(customer.name)}, thank you for your order.</p>
+          <p style="color: #8B5E3C; font-size: 13px;">Order ID: ${esc(orderId)}</p>
           <div style="background: #EAD9C8; padding: 16px; margin: 20px 0;">
             <h3 style="margin-top: 0;">Items Ordered</h3>
-            <pre style="font-family: inherit; white-space: pre-wrap;">${itemLines}</pre>
+            <pre style="font-family: inherit; white-space: pre-wrap;">${esc(itemLines)}</pre>
             <strong>Total: ₹${total}</strong>
           </div>
-          <p><strong>Delivery to:</strong><br/>${customer.address}, ${customer.city} ${customer.pincode}</p>
-          <p style="color: #8B5E3C; font-size: 13px;">Payment ID: ${paymentId}</p>
+          <p><strong>Delivery to:</strong><br/>${esc(customer.address)}, ${esc(customer.city)} ${esc(customer.pincode)}</p>
+          <p style="color: #8B5E3C; font-size: 13px;">Payment ID: ${esc(paymentId)}</p>
           <p>We'll ship your order within 1-2 business days. Anywhere. Anytime.</p>
           <p style="color: #C9953C;">— Team Bean Leaf Brew</p>
         </div>

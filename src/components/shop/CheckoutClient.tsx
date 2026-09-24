@@ -79,24 +79,23 @@ export function CheckoutClient() {
     setError("");
     setLoading(true);
 
-    // Free order (100% coupon discount) - skip Razorpay entirely
+    const cartItems = items.map((i) => ({ productId: i.product.id, quantity: i.quantity }));
+    const couponCode = appliedCoupon?.code ?? null;
+
+    // Free order (100% coupon discount) - skip Razorpay
     if (finalTotal === 0) {
       try {
         const res = await fetch("/api/orders/free", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            customer: form,
-            items,
-            couponCode: appliedCoupon?.code ?? null,
-            discount: appliedCoupon?.discount ?? 0,
-          }),
+          body: JSON.stringify({ customer: form, items: cartItems, couponCode }),
         });
         if (res.ok) {
           clearCart();
           window.location.href = "/checkout/success";
         } else {
-          setError("Something went wrong. Please try again.");
+          const data = await res.json().catch(() => ({}));
+          setError(data.error ?? "Something went wrong. Please try again.");
         }
       } catch {
         setError("Something went wrong. Please try again.");
@@ -109,14 +108,10 @@ export function CheckoutClient() {
       const res = await fetch("/api/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: finalTotal * 100,
-          currency: "INR",
-          receipt: `order_${Date.now()}`,
-        }),
+        body: JSON.stringify({ items: cartItems, couponCode }),
       });
       const data = await res.json();
-      if (!data.id) throw new Error("Failed to create order");
+      if (!res.ok || !data.id) throw new Error(data.error ?? "Failed to create order");
 
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -125,7 +120,7 @@ export function CheckoutClient() {
       script.onload = () => {
         const rzp = new window.Razorpay({
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: finalTotal * 100,
+          amount: data.amount,
           currency: "INR",
           name: "Bean Leaf Brew",
           description: "Coffee Order",
@@ -145,13 +140,7 @@ export function CheckoutClient() {
             const verify = await fetch("/api/razorpay/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                ...response,
-                customer: form,
-                items,
-                couponCode: appliedCoupon?.code ?? null,
-                discount: appliedCoupon?.discount ?? 0,
-              }),
+              body: JSON.stringify({ ...response, customer: form }),
             });
             if (verify.ok) {
               clearCart();
@@ -164,8 +153,13 @@ export function CheckoutClient() {
         });
         rzp.open();
       };
-    } catch {
-      setError("Something went wrong. Please try again.");
+
+      script.onerror = () => {
+        setError("Failed to load payment gateway. Please try again.");
+        setLoading(false);
+      };
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setLoading(false);
     }
   }

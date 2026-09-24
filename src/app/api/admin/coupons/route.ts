@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/adminAuth";
 import { db } from "@/db/client";
 import { coupons } from "@/db/schema";
 import { desc } from "drizzle-orm";
 
 export async function GET() {
-  const cookieStore = await cookies();
-  if (!cookieStore.get("admin_session")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const unauth = await requireAdmin();
+  if (unauth) return unauth;
   const all = await db.select().from(coupons).orderBy(desc(coupons.createdAt));
   return NextResponse.json(all);
 }
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  if (!cookieStore.get("admin_session")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const unauth = await requireAdmin();
+  if (unauth) return unauth;
 
   const body = await req.json();
   const { code, type, amount, minOrderAmount, maxUses, expiresAt } = body;

@@ -1,28 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { db } from "@/db/client";
-import { orders, orderItems, customers, coupons } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { orders, orderItems, customers, coupons, products } from "@/db/schema";
+import { eq, sql, inArray } from "drizzle-orm";
+import { esc } from "@/lib/htmlEscape";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { customer, items, couponCode, discount } = body;
+    const { customer, items, couponCode } = body as {
+      customer: { name: string; email: string; phone?: string; address: string; city: string; state?: string; pincode: string };
+      items: Array<{ productId: number; quantity: number }>;
+      couponCode?: string | null;
+    };
 
-    const subtotal = items.reduce(
-      (sum: number, i: { product: { price: number }; quantity: number }) =>
-        sum + i.product.price * i.quantity,
-      0
-    );
-    const appliedDiscount = Number(discount ?? 0);
-    const total = Math.max(0, subtotal - appliedDiscount);
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: "No items provided" }, { status: 400 });
+    }
 
+    // Look up prices from DB
+    const productIds = items.map((i) => i.productId);
+    const dbProducts = await db.select().from(products).where(inArray(products.id, productIds));
+    const productMap = new Map(dbProducts.map((p) => [p.id, p]));
+
+    let subtotal = 0;
+    const lineItems: Array<{ productId: number; productName: string; price: number; quantity: number }> = [];
+
+    for (const item of items) {
+      const product = productMap.get(item.productId);
+      if (!product) return NextResponse.json({ error: `Product not found: ${item.productId}` }, { status: 400 });
+      const qty = Math.max(1, Math.floor(item.quantity));
+      subtotal += product.price * qty;
+      lineItems.push({ productId: product.id, productName: product.name, price: product.price, quantity: qty });
+    }
+
+    // Validate coupon server-side
+    let discount = 0;
+    let validatedCouponCode: string | null = null;
+
+    if (couponCode) {
+      const [coupon] = await db
+        .select()
+        .from(coupons)
+        .where(eq(coupons.code, couponCode.toUpperCase().trim()))
+        .limit(1);
+
+      const couponValid =
+        coupon &&
+        coupon.active &&
+        !(coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) &&
+        !(coupon.maxUses !== null && coupon.usesCount >= coupon.maxUses) &&
+        subtotal >= coupon.minOrderAmount;
+
+      if (!couponValid) {
+        return NextResponse.json({ error: "Invalid or expired coupon code" }, { status: 400 });
+      }
+
+      discount =
+        coupon.type === "percentage"
+          ? Math.round((subtotal * coupon.amount) / 100)
+          : Math.min(coupon.amount, subtotal);
+      validatedCouponCode = coupon.code;
+    }
+
+    const total = Math.max(0, subtotal - discount);
     if (total > 0) {
       return NextResponse.json({ error: "Order is not free" }, { status: 400 });
     }
 
     const orderId = `free_${Date.now()}`;
-    const paymentId = `coupon_${couponCode ?? "free"}`;
+    const paymentId = `coupon_${validatedCouponCode ?? "free"}`;
     const now = new Date().toISOString();
 
     await db.insert(orders).values({
@@ -37,16 +84,16 @@ export async function POST(req: NextRequest) {
       state: customer.state ?? "",
       pincode: customer.pincode,
       total: 0,
-      discount: appliedDiscount,
-      couponCode: couponCode ?? null,
+      discount,
+      couponCode: validatedCouponCode,
     });
 
     await db.insert(orderItems).values(
-      items.map((i: { product: { id: number; name: string; price: number }; quantity: number }) => ({
+      lineItems.map((i) => ({
         orderId,
-        productId: i.product.id,
-        productName: i.product.name,
-        price: i.product.price,
+        productId: i.productId,
+        productName: i.productName,
+        price: i.price,
         quantity: i.quantity,
       }))
     );
@@ -85,14 +132,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (couponCode) {
+    if (validatedCouponCode) {
       await db
         .update(coupons)
         .set({ usesCount: sql`${coupons.usesCount} + 1` })
-        .where(eq(coupons.code, couponCode));
+        .where(eq(coupons.code, validatedCouponCode));
     }
 
-    sendOrderConfirmation({ customer, items, orderId, paymentId, discount: appliedDiscount })
+    sendOrderConfirmation({ customer, lineItems, orderId, paymentId, discount })
       .catch((err) => console.error("Order confirmation email failed (order saved):", err));
 
     return NextResponse.json({ success: true });
@@ -104,13 +151,13 @@ export async function POST(req: NextRequest) {
 
 async function sendOrderConfirmation({
   customer,
-  items,
+  lineItems,
   orderId,
   paymentId,
   discount,
 }: {
   customer: { name: string; email: string; address: string; city: string; pincode: string };
-  items: Array<{ product: { name: string; price: number }; quantity: number }>;
+  lineItems: Array<{ productName: string; price: number; quantity: number }>;
   orderId: string;
   paymentId: string;
   discount: number;
@@ -119,12 +166,13 @@ async function sendOrderConfirmation({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT ?? 587),
     secure: false,
+    requireTLS: true,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
   });
 
-  const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const itemLines = items
-    .map((i) => `${i.product.name} x${i.quantity} - ₹${i.product.price * i.quantity}`)
+  const subtotal = lineItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const itemLines = lineItems
+    .map((i) => `${i.productName} x${i.quantity} - ₹${i.price * i.quantity}`)
     .join("\n");
 
   await transporter.sendMail({
@@ -139,17 +187,17 @@ async function sendOrderConfirmation({
         </div>
         <div style="padding: 32px; background: #F7F0E6;">
           <h2 style="color: #4A2512;">Order Confirmed!</h2>
-          <p>Hi ${customer.name}, thank you for your order.</p>
-          <p style="color: #8B5E3C; font-size: 13px;">Order ID: ${orderId}</p>
+          <p>Hi ${esc(customer.name)}, thank you for your order.</p>
+          <p style="color: #8B5E3C; font-size: 13px;">Order ID: ${esc(orderId)}</p>
           <div style="background: #EAD9C8; padding: 16px; margin: 20px 0;">
             <h3 style="margin-top: 0;">Items Ordered</h3>
-            <pre style="font-family: inherit; white-space: pre-wrap;">${itemLines}</pre>
+            <pre style="font-family: inherit; white-space: pre-wrap;">${esc(itemLines)}</pre>
             <p>Subtotal: ₹${subtotal}</p>
             <p>Discount: -₹${discount}</p>
             <strong>Total: ₹0 (fully covered by coupon)</strong>
           </div>
-          <p><strong>Delivery to:</strong><br/>${customer.address}, ${customer.city} ${customer.pincode}</p>
-          <p style="color: #8B5E3C; font-size: 13px;">Payment ID: ${paymentId}</p>
+          <p><strong>Delivery to:</strong><br/>${esc(customer.address)}, ${esc(customer.city)} ${esc(customer.pincode)}</p>
+          <p style="color: #8B5E3C; font-size: 13px;">Payment ID: ${esc(paymentId)}</p>
           <p>We'll ship your order within 1-2 business days. Anywhere. Anytime.</p>
           <p style="color: #C9953C;">— Team Bean Leaf Brew</p>
         </div>

@@ -90,6 +90,16 @@ export const orderNotes = sqliteTable("order_notes", {
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
 
+export const pendingOrders = sqliteTable("pending_orders", {
+  id: text("id").primaryKey(),
+  amountPaise: integer("amount_paise").notNull(),
+  discount: real("discount").notNull().default(0),
+  couponCode: text("coupon_code"),
+  itemsJson: text("items_json").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
+export type PendingOrder = typeof pendingOrders.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderNote = typeof orderNotes.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;

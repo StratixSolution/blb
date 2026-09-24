@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/adminAuth";
 import { db } from "@/db/client";
 import { products } from "@/db/schema";
 
-async function requireAdmin() {
-  const cookieStore = await cookies();
-  return cookieStore.get("admin_session")?.value === "1";
-}
-
 export async function GET() {
+  const unauth = await requireAdmin();
+  if (unauth) return unauth;
   const rows = await db.select().from(products);
   return NextResponse.json(rows);
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const unauth = await requireAdmin();
+  if (unauth) return unauth;
 
   const body = await req.json();
   const { name, slug, category, price, regularPrice, shortDescription, description,
@@ -27,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   const [row] = await db.insert(products).values({
     name,
-    slug: slug.toLowerCase().replace(/\s+/g, "-"),
+    slug: (slug as string).toLowerCase().replace(/\s+/g, "-"),
     category,
     price: Number(price),
     regularPrice: regularPrice ? Number(regularPrice) : null,

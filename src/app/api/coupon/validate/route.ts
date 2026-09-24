@@ -3,6 +3,8 @@ import { db } from "@/db/client";
 import { coupons } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+const INVALID = NextResponse.json({ error: "Invalid or expired coupon code" }, { status: 400 });
+
 export async function POST(req: NextRequest) {
   try {
     const { code, cartTotal } = await req.json();
@@ -14,16 +16,10 @@ export async function POST(req: NextRequest) {
       .where(eq(coupons.code, (code as string).toUpperCase().trim()))
       .limit(1);
 
-    if (!coupon) return NextResponse.json({ error: "Invalid coupon code" }, { status: 404 });
-    if (!coupon.active) return NextResponse.json({ error: "This coupon is no longer active" }, { status: 400 });
-
-    if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
-      return NextResponse.json({ error: "This coupon has expired" }, { status: 400 });
-    }
-
-    if (coupon.maxUses !== null && coupon.usesCount >= coupon.maxUses) {
-      return NextResponse.json({ error: "This coupon has reached its usage limit" }, { status: 400 });
-    }
+    if (!coupon) return INVALID;
+    if (!coupon.active) return INVALID;
+    if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) return INVALID;
+    if (coupon.maxUses !== null && coupon.usesCount >= coupon.maxUses) return INVALID;
 
     if (cartTotal < coupon.minOrderAmount) {
       return NextResponse.json(
