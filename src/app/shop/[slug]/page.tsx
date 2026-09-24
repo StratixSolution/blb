@@ -58,7 +58,7 @@ export default async function ProductPage({ params }: Props) {
                   : "Instant Premix"}{" "}
                 · {product.weight}
               </p>
-              <h1 className="font-serif text-4xl text-[#1A0E08] mb-3">{product.name}</h1>
+              <h1 className="font-serif text-2xl md:text-4xl text-[#1A0E08] mb-3">{product.name}</h1>
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-2xl font-medium text-[#1A0E08]">{formatPrice(product.price)}</span>
                 {product.regularPrice && (

@@ -166,7 +166,7 @@ export function CheckoutClient() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-      <form onSubmit={handlePay} className="lg:col-span-3 space-y-5">
+      <form onSubmit={handlePay} className="lg:col-span-3 space-y-5 order-2 lg:order-1">
         <h2 className="font-serif text-2xl text-[#1A0E08] mb-6">Delivery Details</h2>
 
         {[
@@ -201,7 +201,7 @@ export function CheckoutClient() {
         </button>
       </form>
 
-      <aside className="lg:col-span-2">
+      <aside className="lg:col-span-2 order-1 lg:order-2">
         <h2 className="font-serif text-2xl text-[#1A0E08] mb-6">Order Summary</h2>
         <div className="bg-[#FAFAF8] border border-[#D4C4B0] p-6 space-y-4">
           {items.map(({ product, quantity }) => (

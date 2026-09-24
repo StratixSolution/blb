@@ -23,7 +23,7 @@ export default async function ShopPage() {
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#C9953C] mb-2">
               Our Products
             </p>
-            <h1 className="font-serif text-5xl text-[#1A0E08]">Shop</h1>
+            <h1 className="font-serif text-3xl md:text-5xl text-[#1A0E08]">Shop</h1>
           </div>
           <Suspense fallback={<div className="text-sm text-[#8B5E3C]">Loading...</div>}>
             <ShopClient products={products} />

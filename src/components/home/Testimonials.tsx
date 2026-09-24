@@ -24,7 +24,7 @@ export function Testimonials() {
           <p className="text-[10px] uppercase tracking-[0.2em] text-[#C9953C] mb-2">
             Reviews
           </p>
-          <h2 className="font-serif text-4xl text-[#1A0E08]">What our regulars say.</h2>
+          <h2 className="font-serif text-2xl md:text-4xl text-[#1A0E08]">What our regulars say.</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

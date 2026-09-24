@@ -16,7 +16,7 @@ export default function ContactPage() {
         <div className="max-w-5xl mx-auto px-6 py-16">
           <div className="mb-12">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#C9953C] mb-2">Get in Touch</p>
-            <h1 className="font-serif text-5xl text-[#1A0E08]">Contact Us</h1>
+            <h1 className="font-serif text-3xl md:text-5xl text-[#1A0E08]">Contact Us</h1>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-16">
@@ -32,7 +32,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-[#8B5E3C] mb-1">Phone</p>
-                  <p>+91 8077807253</p>
+                  <p>+91 8123273344</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-[#8B5E3C] mb-1">Orders & Support</p>

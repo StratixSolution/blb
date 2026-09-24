@@ -18,6 +18,7 @@ export const orders = sqliteTable("orders", {
   discount: real("discount").notNull().default(0),
   couponCode: text("coupon_code"),
   trackingRef: text("tracking_ref"),
+  trackingVendor: text("tracking_vendor"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });

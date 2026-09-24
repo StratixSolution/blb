@@ -66,23 +66,36 @@ export default async function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {allOrders.map((order) => (
-                <tr key={order.id} className="border-b border-gray-800 hover:bg-gray-800/40">
-                  <td className="px-5 py-3">
-                    <Link href={`/admin/orders/${order.id}`} className="text-amber-400 hover:text-amber-300 font-mono text-xs">
-                      #{order.id.slice(-8).toUpperCase()}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3 text-gray-200">{order.customerName}</td>
-                  <td className="px-5 py-3 text-gray-200">₹{order.total.toLocaleString("en-IN")}</td>
-                  <td className="px-5 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded font-medium capitalize ${statusColor[order.status] ?? "bg-gray-800 text-gray-300"}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-gray-400 text-xs">{order.createdAt.slice(0, 10)}</td>
-                </tr>
-              ))}
+              {allOrders.map((order) => {
+                const href = `/admin/orders/${order.id}`;
+                const cell = "p-0";
+                const inner = "flex items-center px-5 py-3 h-full";
+                return (
+                  <tr key={order.id} className="border-b border-gray-800 hover:bg-gray-800/40 cursor-pointer">
+                    <td className={cell}>
+                      <Link href={href} className={`${inner} text-amber-400 font-mono text-xs`}>
+                        #{order.id.slice(-8).toUpperCase()}
+                      </Link>
+                    </td>
+                    <td className={cell}>
+                      <Link href={href} className={`${inner} text-gray-200`}>{order.customerName}</Link>
+                    </td>
+                    <td className={cell}>
+                      <Link href={href} className={`${inner} text-gray-200`}>₹{order.total.toLocaleString("en-IN")}</Link>
+                    </td>
+                    <td className={cell}>
+                      <Link href={href} className={inner}>
+                        <span className={`text-xs px-2 py-0.5 rounded font-medium capitalize ${statusColor[order.status] ?? "bg-gray-800 text-gray-300"}`}>
+                          {order.status}
+                        </span>
+                      </Link>
+                    </td>
+                    <td className={cell}>
+                      <Link href={href} className={`${inner} text-gray-400 text-xs`}>{order.createdAt.slice(0, 10)}</Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           <div className="px-5 py-3 border-t border-gray-800">

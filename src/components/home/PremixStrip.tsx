@@ -16,7 +16,7 @@ export function PremixStrip({ products }: Props) {
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#C9953C] mb-2">
               Instant Premix
             </p>
-            <h2 className="font-serif text-4xl text-[#1A0E08]">Ready in 60 seconds.</h2>
+            <h2 className="font-serif text-2xl md:text-4xl text-[#1A0E08]">Ready in 60 seconds.</h2>
           </div>
           <Link
             href="/shop?category=instant-premix"

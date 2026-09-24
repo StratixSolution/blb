@@ -91,8 +91,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <p className="text-gray-500 mb-0.5">Payment ID</p>
             <p className="text-gray-300 font-mono">{order.paymentId}</p>
           </div>
+          {order.trackingVendor && (
+            <div>
+              <p className="text-gray-500 mb-0.5">Tracking Vendor</p>
+              <p className="text-gray-300 text-sm">{order.trackingVendor}</p>
+            </div>
+          )}
           {order.trackingRef && (
-            <div className="col-span-2">
+            <div className={order.trackingVendor ? "" : "col-span-2"}>
               <p className="text-gray-500 mb-0.5">Tracking Reference</p>
               <p className="text-amber-400 font-mono text-sm">{order.trackingRef}</p>
             </div>
@@ -102,6 +108,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           orderId={order.id}
           currentStatus={order.status}
           currentTrackingRef={order.trackingRef ?? null}
+          currentTrackingVendor={order.trackingVendor ?? null}
         />
       </div>
 

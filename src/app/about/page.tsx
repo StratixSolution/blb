@@ -23,7 +23,7 @@ export default function AboutPage() {
           />
           <div className="relative z-10 max-w-7xl mx-auto px-6 pb-12 w-full">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[#C9953C] mb-2">Our Story</p>
-            <h1 className="font-serif text-5xl text-[#F7F0E6]">About Us</h1>
+            <h1 className="font-serif text-3xl md:text-5xl text-[#F7F0E6]">About Us</h1>
           </div>
         </section>
 

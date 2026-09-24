@@ -10,7 +10,6 @@ const shopLinks = [
 const companyLinks = [
   { label: "About Us", href: "/about" },
   { label: "Contact", href: "/contact" },
-  { label: "Admin", href: "/admin" },
 ];
 
 export function Footer() {
@@ -78,7 +77,7 @@ export function Footer() {
             © {new Date().getFullYear()} Bean Leaf Brew LLP. All rights reserved.
           </p>
           <p className="text-xs text-[#F7F0E6]/30">
-            Whitefield, Bengaluru 560066 · +91 8077807253
+            Whitefield, Bengaluru 560066 · +91 8123273344
           </p>
         </div>
       </div>

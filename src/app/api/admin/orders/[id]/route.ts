@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await req.json();
-  const { status, trackingRef, note, noteType } = body;
+  const { status, trackingRef, trackingVendor, note, noteType } = body;
 
   if (note?.trim()) {
     await db.insert(orderNotes).values({
@@ -22,13 +22,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
   }
 
-  if (status || trackingRef !== undefined) {
+  if (status || trackingRef !== undefined || trackingVendor !== undefined) {
     const [order] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
     const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
     if (status) updates.status = status;
     if (trackingRef !== undefined) updates.trackingRef = trackingRef || null;
+    if (trackingVendor !== undefined) updates.trackingVendor = trackingVendor || null;
 
     await db.update(orders).set(updates).where(eq(orders.id, id));
 
@@ -38,7 +39,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const visibleNotes = customerNotes.filter((n) => n.type === "customer");
 
       sendDispatchEmail({
-        order: { id: order.id, paymentId: order.paymentId, customerName: order.customerName, customerEmail: order.customerEmail, customerPhone: order.customerPhone, address: order.address, city: order.city, state: order.state, pincode: order.pincode, total: order.total, trackingRef: (trackingRef || order.trackingRef) ?? null },
+        order: {
+          id: order.id,
+          paymentId: order.paymentId,
+          customerName: order.customerName,
+          customerEmail: order.customerEmail,
+          customerPhone: order.customerPhone,
+          address: order.address,
+          city: order.city,
+          state: order.state,
+          pincode: order.pincode,
+          total: order.total,
+          trackingRef: (trackingRef !== undefined ? trackingRef : order.trackingRef) || null,
+          trackingVendor: (trackingVendor !== undefined ? trackingVendor : order.trackingVendor) || null,
+        },
         items,
         customerNotes: visibleNotes.map((n) => n.note),
         newNote: noteType === "customer" && note?.trim() ? note.trim() : null,
@@ -55,7 +69,7 @@ async function sendDispatchEmail({
   customerNotes,
   newNote,
 }: {
-  order: { id: string; paymentId: string; customerName: string; customerEmail: string; customerPhone: string; address: string; city: string; state: string; pincode: string; total: number; trackingRef: string | null };
+  order: { id: string; paymentId: string; customerName: string; customerEmail: string; customerPhone: string; address: string; city: string; state: string; pincode: string; total: number; trackingRef: string | null; trackingVendor: string | null };
   items: Array<{ productName: string; price: number; quantity: number }>;
   customerNotes: string[];
   newNote: string | null;
@@ -73,11 +87,13 @@ async function sendDispatchEmail({
     .map((i) => `<tr><td style="padding:6px 0;border-bottom:1px solid #EAD9C8">${esc(i.productName)}</td><td style="padding:6px 0;border-bottom:1px solid #EAD9C8;text-align:center">${i.quantity}</td><td style="padding:6px 0;border-bottom:1px solid #EAD9C8;text-align:right">₹${(i.price * i.quantity).toLocaleString("en-IN")}</td></tr>`)
     .join("");
 
-  const trackingBlock = order.trackingRef
+  const hasTracking = !!(order.trackingRef || order.trackingVendor);
+  const trackingBlock = hasTracking
     ? `<div style="background:#EAD9C8;padding:16px;margin:16px 0;border-left:4px solid #C9953C">
-        <p style="margin:0 0 4px;font-size:12px;color:#8B5E3C;text-transform:uppercase;letter-spacing:1px">Tracking Reference</p>
-        <p style="margin:0;font-size:18px;font-family:monospace;font-weight:bold;color:#1A0E08">${esc(order.trackingRef)}</p>
-        <p style="margin:6px 0 0;font-size:12px;color:#4A2512">Use this reference to track your shipment with the courier.</p>
+        <p style="margin:0 0 8px;font-size:12px;color:#8B5E3C;text-transform:uppercase;letter-spacing:1px">Shipment Tracking</p>
+        ${order.trackingVendor ? `<p style="margin:0 0 4px;font-size:13px;color:#4A2512"><strong>Courier:</strong> ${esc(order.trackingVendor)}</p>` : ""}
+        ${order.trackingRef ? `<p style="margin:0 0 4px;font-size:13px;color:#4A2512"><strong>Tracking Reference:</strong></p><p style="margin:0;font-size:18px;font-family:monospace;font-weight:bold;color:#1A0E08">${esc(order.trackingRef)}</p>` : ""}
+        <p style="margin:8px 0 0;font-size:12px;color:#4A2512">Use this reference to track your shipment with the courier.</p>
       </div>`
     : "";
 
