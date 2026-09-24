@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, real } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, real, index } from "drizzle-orm/sqlite-core";
 
 export const orders = sqliteTable("orders", {
   id: text("id").primaryKey(),
@@ -21,7 +21,10 @@ export const orders = sqliteTable("orders", {
   trackingVendor: text("tracking_vendor"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
-});
+}, (t) => ({
+  createdAtIdx: index("idx_orders_created_at").on(t.createdAt),
+  statusIdx: index("idx_orders_status").on(t.status),
+}));
 
 export const orderItems = sqliteTable("order_items", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -32,7 +35,9 @@ export const orderItems = sqliteTable("order_items", {
   productName: text("product_name").notNull(),
   price: real("price").notNull(),
   quantity: integer("quantity").notNull(),
-});
+}, (t) => ({
+  orderIdIdx: index("idx_order_items_order_id").on(t.orderId),
+}));
 
 export const customers = sqliteTable("customers", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -47,7 +52,9 @@ export const customers = sqliteTable("customers", {
   totalSpend: real("total_spend").notNull().default(0),
   lastOrderAt: text("last_order_at"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
-});
+}, (t) => ({
+  lastOrderAtIdx: index("idx_customers_last_order_at").on(t.lastOrderAt),
+}));
 
 export const coupons = sqliteTable("coupons", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -81,7 +88,10 @@ export const products = sqliteTable("products", {
   featured: integer("featured", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
-});
+}, (t) => ({
+  categoryIdx: index("idx_products_category").on(t.category),
+  featuredIdx: index("idx_products_featured").on(t.featured),
+}));
 
 export const orderNotes = sqliteTable("order_notes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -89,7 +99,9 @@ export const orderNotes = sqliteTable("order_notes", {
   note: text("note").notNull(),
   type: text("type", { enum: ["internal", "customer"] }).notNull().default("internal"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
-});
+}, (t) => ({
+  orderIdIdx: index("idx_order_notes_order_id").on(t.orderId),
+}));
 
 export const pendingOrders = sqliteTable("pending_orders", {
   id: text("id").primaryKey(),
