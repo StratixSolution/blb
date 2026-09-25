@@ -14,3 +14,7 @@ Steps needed:
 ### Cronjob to send callback notifications after sometime
 
 ### Status check with delivery partner to update status and send mail to customer for order delivery confirmation
+
+### Campaigns for offers and discounts - send mail / whatsapp notifications to customers
+
+### Subscription model
