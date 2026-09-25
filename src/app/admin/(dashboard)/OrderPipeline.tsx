@@ -4,8 +4,6 @@ const STAGES = [
   { key: "pending",    label: "Pending",    color: "text-amber-400",  bar: "bg-amber-500",  pulse: true  },
   { key: "processing", label: "Processing", color: "text-yellow-400", bar: "bg-yellow-500", pulse: false },
   { key: "shipped",    label: "Shipped",    color: "text-blue-400",   bar: "bg-blue-500",   pulse: false },
-  { key: "delivered",  label: "Delivered",  color: "text-green-400",  bar: "bg-green-500",  pulse: false },
-  { key: "cancelled",  label: "Cancelled",  color: "text-red-400",    bar: "bg-red-500",    pulse: false },
 ] as const;
 
 interface StageData { key: string; count: number; total: number }

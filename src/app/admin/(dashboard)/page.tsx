@@ -1,39 +1,53 @@
 import { db } from "@/db/client";
 import { orders, customers } from "@/db/schema";
-import { sql } from "drizzle-orm";
+import { sql, gte } from "drizzle-orm";
 import Link from "next/link";
 import { OrderPipeline } from "./OrderPipeline";
+import { RevenueOrdersWidget } from "./RevenueOrdersWidget";
 
 export default async function AdminDashboard() {
-  const [allOrders, [{ customerCount }], [{ sum: revenueSum }], statusStats] = await Promise.all([
+  const now = new Date();
+  const startCurrent = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const start1m = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString();
+  const start3m = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString();
+
+  const [allOrders, [{ customerCount }], statusStats, periodCurrent, period1m, period3m] = await Promise.all([
     db.select().from(orders).orderBy(sql`${orders.createdAt} desc`).limit(5),
     db.select({ customerCount: sql<number>`count(*)` }).from(customers),
-    db.select({ sum: sql<number>`coalesce(sum(${orders.total}), 0)` }).from(orders),
     db.select({
       status: orders.status,
       count: sql<number>`count(*)`,
       total: sql<number>`coalesce(sum(${orders.total}), 0)`,
     }).from(orders).groupBy(orders.status),
+    db.select({
+      revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
+      orders: sql<number>`count(*)`,
+    }).from(orders).where(gte(orders.createdAt, startCurrent)),
+    db.select({
+      revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
+      orders: sql<number>`count(*)`,
+    }).from(orders).where(gte(orders.createdAt, start1m)),
+    db.select({
+      revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
+      orders: sql<number>`count(*)`,
+    }).from(orders).where(gte(orders.createdAt, start3m)),
   ]);
 
   const byStatus = Object.fromEntries(
     statusStats.map((r) => [r.status, { count: Number(r.count), total: Number(r.total) }])
   );
-  const totalOrders = statusStats.reduce((s, r) => s + Number(r.count), 0);
 
-  const stats = [
-    { label: "Total Revenue", value: `₹${Number(revenueSum ?? 0).toLocaleString("en-IN")}` },
-    { label: "Total Orders", value: totalOrders },
-    { label: "Customers", value: Number(customerCount) },
-    { label: "Pending / Processing", value: (byStatus["pending"]?.count ?? 0) + (byStatus["processing"]?.count ?? 0) },
-  ];
+  const periodData = {
+    "current": { revenue: Number(periodCurrent[0]?.revenue ?? 0), orders: Number(periodCurrent[0]?.orders ?? 0) },
+    "1m": { revenue: Number(period1m[0]?.revenue ?? 0), orders: Number(period1m[0]?.orders ?? 0) },
+    "3m": { revenue: Number(period3m[0]?.revenue ?? 0), orders: Number(period3m[0]?.orders ?? 0) },
+  };
+
 
   const pipelineStages = [
     { key: "pending",    label: "Pending",    count: byStatus["pending"]?.count    ?? 0, total: byStatus["pending"]?.total    ?? 0 },
     { key: "processing", label: "Processing", count: byStatus["processing"]?.count ?? 0, total: byStatus["processing"]?.total ?? 0 },
     { key: "shipped",    label: "Shipped",    count: byStatus["shipped"]?.count    ?? 0, total: byStatus["shipped"]?.total    ?? 0 },
-    { key: "delivered",  label: "Delivered",  count: byStatus["delivered"]?.count  ?? 0, total: byStatus["delivered"]?.total  ?? 0 },
-    { key: "cancelled",  label: "Cancelled",  count: byStatus["cancelled"]?.count  ?? 0, total: byStatus["cancelled"]?.total  ?? 0 },
   ];
 
   const statusColor: Record<string, string> = {
@@ -48,13 +62,8 @@ export default async function AdminDashboard() {
     <div className="p-8">
       <h1 className="text-white text-2xl font-semibold mb-8">Dashboard</h1>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        {stats.map((s) => (
-          <div key={s.label} className="bg-gray-900 border border-gray-800 p-5 rounded">
-            <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">{s.label}</p>
-            <p className="text-white text-2xl font-semibold">{s.value}</p>
-          </div>
-        ))}
+      <div className="mb-10">
+        <RevenueOrdersWidget data={periodData} />
       </div>
 
       <div className="mb-10">
