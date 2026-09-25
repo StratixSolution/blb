@@ -32,6 +32,10 @@ export function OrderStatusUpdater({ orderId, currentStatus, currentTrackingRef,
   const [trackingVendor, setTrackingVendor] = useState(currentTrackingVendor ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  // when true, the "Mark as Shipped" prompt is open
+  const [shippingPrompt, setShippingPrompt] = useState(false);
+  const [promptRef, setPromptRef] = useState("");
+  const [promptVendor, setPromptVendor] = useState("");
   const router = useRouter();
 
   const isShipped = status === "shipped";
@@ -40,7 +44,7 @@ export function OrderStatusUpdater({ orderId, currentStatus, currentTrackingRef,
     trackingRef !== (currentTrackingRef ?? "") ||
     trackingVendor !== (currentTrackingVendor ?? "");
 
-  async function save(overrides?: { status?: string }) {
+  async function save(overrides?: { status?: string; trackingRef?: string; trackingVendor?: string }) {
     setSaving(true);
     const nextStatus = overrides?.status ?? status;
     await fetch(`/api/admin/orders/${orderId}`, {
@@ -48,13 +52,16 @@ export function OrderStatusUpdater({ orderId, currentStatus, currentTrackingRef,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         status: nextStatus,
-        trackingRef: trackingRef.trim() || null,
-        trackingVendor: trackingVendor.trim() || null,
+        trackingRef: (overrides?.trackingRef ?? trackingRef).trim() || null,
+        trackingVendor: (overrides?.trackingVendor ?? trackingVendor).trim() || null,
       }),
     });
     if (overrides?.status) setStatus(overrides.status);
+    if (overrides?.trackingRef !== undefined) setTrackingRef(overrides.trackingRef);
+    if (overrides?.trackingVendor !== undefined) setTrackingVendor(overrides.trackingVendor);
     setSaving(false);
     setSaved(true);
+    setShippingPrompt(false);
     setTimeout(() => setSaved(false), 2000);
     router.refresh();
   }
@@ -63,11 +70,67 @@ export function OrderStatusUpdater({ orderId, currentStatus, currentTrackingRef,
 
   return (
     <div className="space-y-4">
-      {suggestion && (
+      {/* Shipping prompt - shown instead of instant save when clicking Mark as Shipped */}
+      {shippingPrompt ? (
+        <div className="border border-blue-800/60 bg-blue-950/30 rounded p-4 space-y-3">
+          <p className="text-blue-300 text-xs font-medium uppercase tracking-wider">Enter Shipment Details</p>
+          <div>
+            <label className="block text-gray-400 text-xs mb-1">
+              Courier / Tracking Provider
+              <span className="ml-1 text-gray-600 normal-case">(e.g. DTDC, Delhivery, BlueDart)</span>
+            </label>
+            <input
+              type="text"
+              value={promptVendor}
+              onChange={(e) => setPromptVendor(e.target.value)}
+              placeholder="e.g. Delhivery"
+              className="w-full bg-gray-800 border border-gray-700 text-gray-200 text-sm px-3 py-2 focus:outline-none focus:border-blue-500"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-gray-400 text-xs mb-1">
+              Tracking Number / AWB
+            </label>
+            <input
+              type="text"
+              value={promptRef}
+              onChange={(e) => setPromptRef(e.target.value)}
+              placeholder="e.g. DTDC123456789"
+              className="w-full bg-gray-800 border border-gray-700 text-gray-200 text-sm px-3 py-2 focus:outline-none focus:border-blue-500 font-mono"
+            />
+          </div>
+          <p className="text-gray-500 text-xs">
+            A dispatch email will be sent to the customer
+            {(promptRef.trim() || promptVendor.trim()) ? " with tracking details." : " (add tracking details above to include them)."}
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => save({ status: "shipped", trackingRef: promptRef, trackingVendor: promptVendor })}
+              disabled={saving}
+              className="bg-blue-700 hover:bg-blue-600 disabled:opacity-40 text-white text-xs font-medium px-4 py-2 transition-colors"
+            >
+              {saving ? "Saving..." : "Confirm Shipment →"}
+            </button>
+            <button
+              onClick={() => { setShippingPrompt(false); setPromptRef(""); setPromptVendor(""); }}
+              className="text-gray-500 hover:text-gray-300 text-xs transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : suggestion && (
         <div className="flex items-center gap-3 p-3 bg-gray-800/50 border border-gray-700/50 rounded">
           <span className="text-gray-500 text-xs">Next step:</span>
           <button
-            onClick={() => save({ status: suggestion.key })}
+            onClick={() => {
+              if (suggestion.key === "shipped") {
+                setShippingPrompt(true);
+              } else {
+                save({ status: suggestion.key });
+              }
+            }}
             disabled={saving}
             className="text-xs font-medium text-amber-400 hover:text-amber-300 disabled:opacity-40 transition-colors"
           >
@@ -99,9 +162,9 @@ export function OrderStatusUpdater({ orderId, currentStatus, currentTrackingRef,
         <div className="space-y-3">
           <div>
             <label className="block text-gray-400 text-xs uppercase tracking-wider mb-1">
-              Tracking Vendor
+              Tracking Provider
               <span className="ml-2 text-gray-600 normal-case tracking-normal">
-                (courier name - included in dispatch email)
+                (included in dispatch email)
               </span>
             </label>
             <input
@@ -114,9 +177,9 @@ export function OrderStatusUpdater({ orderId, currentStatus, currentTrackingRef,
           </div>
           <div>
             <label className="block text-gray-400 text-xs uppercase tracking-wider mb-1">
-              Tracking Reference
+              Tracking Number / AWB
               <span className="ml-2 text-gray-600 normal-case tracking-normal">
-                (AWB / courier ref - included in dispatch email)
+                (included in dispatch email)
               </span>
             </label>
             <input
@@ -128,13 +191,6 @@ export function OrderStatusUpdater({ orderId, currentStatus, currentTrackingRef,
             />
           </div>
         </div>
-      )}
-
-      {status === "shipped" && currentStatus !== "shipped" && (
-        <p className="text-blue-400 text-xs">
-          A dispatch email will be sent to the customer when you save.
-          {(trackingRef.trim() || trackingVendor.trim()) && " Tracking details will be included."}
-        </p>
       )}
     </div>
   );

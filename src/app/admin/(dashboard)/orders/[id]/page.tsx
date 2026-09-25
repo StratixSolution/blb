@@ -27,6 +27,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <h1 className="text-white text-2xl font-semibold">
           {order.orderNumber ?? `#${order.id.slice(-8).toUpperCase()}`}
         </h1>
+        <span className={`text-xs px-2.5 py-1 rounded font-medium capitalize ${
+          order.status === "delivered"  ? "bg-green-900 text-green-300"  :
+          order.status === "processing" ? "bg-yellow-900 text-yellow-300" :
+          order.status === "shipped"    ? "bg-blue-900 text-blue-300"    :
+          order.status === "cancelled"  ? "bg-red-900 text-red-300"      :
+          "bg-gray-800 text-gray-300"
+        }`}>{order.status}</span>
         <span className="text-gray-500 text-sm">{order.createdAt.slice(0, 10)}</span>
       </div>
 

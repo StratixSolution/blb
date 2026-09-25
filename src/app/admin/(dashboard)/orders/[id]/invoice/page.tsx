@@ -154,6 +154,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           letter-spacing: 0.5px;
         }
         .addr-block p { line-height: 1.5; margin-top: 3px; font-size: 8.5pt; }
+        .addr-block:last-child { text-align: right; }
         table {
           width: 100%;
           border-collapse: collapse;

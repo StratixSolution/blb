@@ -10,3 +10,7 @@ Steps needed:
 - Cron/scheduled job to send recovery emails after N hours
 - Unsubscribe link in recovery email
 - Admin view of abandoned carts with conversion stats
+
+### Cronjob to send callback notifications after sometime
+
+### Status check with delivery partner to update status and send mail to customer for order delivery confirmation
