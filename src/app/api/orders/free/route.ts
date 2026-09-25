@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     await db.insert(orders).values({
       id: orderId,
       paymentId,
-      status: "processing",
+      status: "pending",
       orderNumber,
       customerName: customer.name,
       customerEmail: customer.email,

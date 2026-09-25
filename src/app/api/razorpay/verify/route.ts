@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     await db.insert(orders).values({
       id: razorpay_order_id,
       paymentId: razorpay_payment_id,
-      status: "processing",
+      status: "pending",
       orderNumber,
       customerName: customer.name,
       customerEmail: customer.email,
