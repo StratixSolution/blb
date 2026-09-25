@@ -77,14 +77,13 @@ export default async function AnalyticsPage({
       and(gte(orders.createdAt, periodStart), lt(orders.createdAt, periodEnd))
     ),
 
-    // Top 5 products for selected period
+    // Top 5 products for selected period — JOIN in the FROM clause for raw SQL compatibility
     db.select({
       productName: sql<string>`oi.product_name`,
       revenue: sql<number>`coalesce(sum(oi.price * oi.quantity), 0)`,
       qty: sql<number>`sum(oi.quantity)`,
     })
-    .from(sql`order_items oi`)
-    .innerJoin(sql`orders o`, sql`oi.order_id = o.id`)
+    .from(sql`order_items oi JOIN orders o ON oi.order_id = o.id`)
     .where(sql`o.created_at >= ${periodStart} AND o.created_at < ${periodEnd}`)
     .groupBy(sql`oi.product_name`)
     .orderBy(sql`sum(oi.price * oi.quantity) desc`)
