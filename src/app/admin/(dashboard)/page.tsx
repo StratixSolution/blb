@@ -5,24 +5,16 @@ import Link from "next/link";
 import { OrderPipeline } from "./OrderPipeline";
 
 export default async function AdminDashboard() {
-  const [allOrders, allCustomers] = await Promise.all([
+  const [allOrders, [{ customerCount }], [{ sum: revenueSum }], statusStats] = await Promise.all([
     db.select().from(orders).orderBy(sql`${orders.createdAt} desc`).limit(5),
-    db.select().from(customers),
-  ]);
-
-  const totalRevenue = allOrders.reduce((s, o) => s + o.total, 0);
-  const revenueAllTime = await db
-    .select({ sum: sql<number>`coalesce(sum(${orders.total}), 0)` })
-    .from(orders);
-
-  const statusStats = await db
-    .select({
+    db.select({ customerCount: sql<number>`count(*)` }).from(customers),
+    db.select({ sum: sql<number>`coalesce(sum(${orders.total}), 0)` }).from(orders),
+    db.select({
       status: orders.status,
       count: sql<number>`count(*)`,
       total: sql<number>`coalesce(sum(${orders.total}), 0)`,
-    })
-    .from(orders)
-    .groupBy(orders.status);
+    }).from(orders).groupBy(orders.status),
+  ]);
 
   const byStatus = Object.fromEntries(
     statusStats.map((r) => [r.status, { count: Number(r.count), total: Number(r.total) }])
@@ -30,9 +22,9 @@ export default async function AdminDashboard() {
   const totalOrders = statusStats.reduce((s, r) => s + Number(r.count), 0);
 
   const stats = [
-    { label: "Total Revenue", value: `₹${(revenueAllTime[0]?.sum ?? 0).toLocaleString("en-IN")}` },
+    { label: "Total Revenue", value: `₹${Number(revenueSum ?? 0).toLocaleString("en-IN")}` },
     { label: "Total Orders", value: totalOrders },
-    { label: "Customers", value: allCustomers.length },
+    { label: "Customers", value: Number(customerCount) },
     { label: "Pending / Processing", value: (byStatus["pending"]?.count ?? 0) + (byStatus["processing"]?.count ?? 0) },
   ];
 

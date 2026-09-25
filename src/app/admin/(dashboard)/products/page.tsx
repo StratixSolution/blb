@@ -1,6 +1,6 @@
 import { db } from "@/db/client";
 import { products } from "@/db/schema";
-import { and, or, like, eq } from "drizzle-orm";
+import { and, or, like, eq, sql } from "drizzle-orm";
 import Image from "next/image";
 import Link from "next/link";
 import { AddProductButton, EditProductButton, DeleteProductButton, ToggleStockButton } from "./ProductActions";
@@ -48,19 +48,15 @@ export default async function ProductsPage({
     ? or(like(products.name, `%${search}%`), like(products.slug, `%${search}%`))
     : undefined;
 
-  const rows = await db
-    .select()
-    .from(products)
-    .where(and(categoryFilter, stockFilter, searchFilter));
+  const [rows, categoryCounts] = await Promise.all([
+    db.select().from(products).where(and(categoryFilter, stockFilter, searchFilter)),
+    db.select({ category: products.category, count: sql<number>`count(*)` })
+      .from(products)
+      .groupBy(products.category),
+  ]);
 
-  // Counts per category (ignoring search/stock for stable tab numbers)
-  const allRows = await db.select({ category: products.category }).from(products);
-  const categoryCount = Object.fromEntries(
-    CATEGORY_TABS.filter((t) => t.key !== "all").map((t) => [
-      t.key,
-      allRows.filter((r) => r.category === t.key).length,
-    ])
-  );
+  const totalProductCount = categoryCounts.reduce((s, r) => s + Number(r.count), 0);
+  const categoryCount = Object.fromEntries(categoryCounts.map((r) => [r.category, Number(r.count)]));
 
   // baseParams for SearchInput (preserves category + stock, not q or page)
   const baseParamsForSearch = new URLSearchParams();
@@ -88,7 +84,7 @@ export default async function ProductsPage({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-1 border-b border-gray-800">
           {CATEGORY_TABS.map((tab) => {
-            const count = tab.key === "all" ? allRows.length : (categoryCount[tab.key] ?? 0);
+            const count = tab.key === "all" ? totalProductCount : (categoryCount[tab.key] ?? 0);
             const isActive = tab.key === activeCategory;
             const tabHref = `/admin/products?category=${tab.key}${search ? `&q=${encodeURIComponent(search)}` : ""}${activeStock !== "all" ? `&stock=${activeStock}` : ""}`;
             return (

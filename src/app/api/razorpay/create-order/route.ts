@@ -65,7 +65,9 @@ export async function POST(req: NextRequest) {
         discount =
           coupon.type === "percentage"
             ? Math.round((subtotal * coupon.amount) / 100)
-            : Math.min(coupon.amount, subtotal);
+            : coupon.type === "flat_total"
+              ? Math.max(0, subtotal - coupon.amount)
+              : Math.min(coupon.amount, subtotal);
         validatedCouponCode = coupon.code;
       }
     }

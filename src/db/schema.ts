@@ -63,7 +63,7 @@ export const customers = sqliteTable("customers", {
 export const coupons = sqliteTable("coupons", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   code: text("code").notNull().unique(),
-  type: text("type", { enum: ["percentage", "fixed"] }).notNull().default("percentage"),
+  type: text("type", { enum: ["percentage", "fixed", "flat_total"] }).notNull().default("percentage"),
   amount: real("amount").notNull(),
   minOrderAmount: real("min_order_amount").notNull().default(0),
   maxUses: integer("max_uses"),

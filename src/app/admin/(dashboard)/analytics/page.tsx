@@ -1,23 +1,23 @@
+import { Suspense } from "react";
 import { db } from "@/db/client";
 import { orders } from "@/db/schema";
 import { sql, gte, lt, and } from "drizzle-orm";
 import Link from "next/link";
-import { AnalyticsCharts } from "./AnalyticsCharts";
+import { PeriodCharts } from "./PeriodCharts";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function daysInMonth(year: number, month: number): string[] {
-  const days: string[] = [];
-  const d = new Date(year, month - 1, 1);
-  while (d.getMonth() === month - 1) {
-    days.push(d.toISOString().slice(0, 10));
-    d.setDate(d.getDate() + 1);
-  }
-  return days;
-}
-
-function monthsInYear(year: number): string[] {
-  return Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`);
+function ChartsSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="h-4 w-56 bg-gray-800 rounded animate-pulse" />
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="bg-gray-900 border border-gray-800 rounded p-5 h-64 animate-pulse" />
+        <div className="bg-gray-900 border border-gray-800 rounded p-5 h-64 animate-pulse" />
+      </div>
+      <div className="bg-gray-900 border border-gray-800 rounded h-48 animate-pulse" />
+    </div>
+  );
 }
 
 export default async function AnalyticsPage({
@@ -29,16 +29,6 @@ export default async function AnalyticsPage({
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
-
-  // Available years from DB
-  const yearRows = await db
-    .select({ yr: sql<string>`STRFTIME('%Y', ${orders.createdAt})` })
-    .from(orders)
-    .groupBy(sql`STRFTIME('%Y', ${orders.createdAt})`);
-  const availableYears = [...new Set(yearRows.map((r) => Number(r.yr)))]
-    .filter(Boolean)
-    .sort((a, b) => b - a);
-  if (!availableYears.includes(currentYear)) availableYears.unshift(currentYear);
 
   const selectedYear = yearParam ? parseInt(yearParam, 10) : currentYear;
   const selectedMonth = monthParam ? parseInt(monthParam, 10) : null;
@@ -55,77 +45,29 @@ export default async function AnalyticsPage({
   const thisMonthStart = `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`;
   const nextMonthStart = new Date(currentYear, currentMonth, 1).toISOString().slice(0, 10);
 
-  const [allTime, thisMonth, periodData, topProducts, chartRaw] = await Promise.all([
-    // All-time totals
+  // Stable queries — don't depend on selected period
+  const [yearRows, allTime, thisMonth] = await Promise.all([
+    db.select({ yr: sql<string>`STRFTIME('%Y', ${orders.createdAt})` })
+      .from(orders)
+      .groupBy(sql`STRFTIME('%Y', ${orders.createdAt})`),
     db.select({
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
       count: sql<number>`count(*)`,
     }).from(orders),
-
-    // This calendar month (always current)
-    db.select({
-      count: sql<number>`count(*)`,
-    }).from(orders).where(
-      and(gte(orders.createdAt, thisMonthStart), lt(orders.createdAt, nextMonthStart))
-    ),
-
-    // Selected period stats
-    db.select({
-      revenue: sql<number>`coalesce(sum(${orders.total}), 0)`,
-      count: sql<number>`count(*)`,
-    }).from(orders).where(
-      and(gte(orders.createdAt, periodStart), lt(orders.createdAt, periodEnd))
-    ),
-
-    // Top 5 products for selected period — JOIN in the FROM clause for raw SQL compatibility
-    db.select({
-      productName: sql<string>`oi.product_name`,
-      revenue: sql<number>`coalesce(sum(oi.price * oi.quantity), 0)`,
-      qty: sql<number>`sum(oi.quantity)`,
-    })
-    .from(sql`order_items oi JOIN orders o ON oi.order_id = o.id`)
-    .where(sql`o.created_at >= ${periodStart} AND o.created_at < ${periodEnd}`)
-    .groupBy(sql`oi.product_name`)
-    .orderBy(sql`sum(oi.price * oi.quantity) desc`)
-    .limit(5),
-
-    // Chart data: daily (month selected) or monthly (year only)
-    selectedMonth
-      ? db.select({
-          label: sql<string>`date(${orders.createdAt})`,
-          revenue: sql<number>`sum(${orders.total})`,
-          count: sql<number>`count(*)`,
-        }).from(orders)
-          .where(and(gte(orders.createdAt, periodStart), lt(orders.createdAt, periodEnd)))
-          .groupBy(sql`date(${orders.createdAt})`)
-      : db.select({
-          label: sql<string>`STRFTIME('%Y-%m', ${orders.createdAt})`,
-          revenue: sql<number>`sum(${orders.total})`,
-          count: sql<number>`count(*)`,
-        }).from(orders)
-          .where(and(gte(orders.createdAt, periodStart), lt(orders.createdAt, periodEnd)))
-          .groupBy(sql`STRFTIME('%Y-%m', ${orders.createdAt})`),
+    db.select({ count: sql<number>`count(*)` })
+      .from(orders)
+      .where(and(gte(orders.createdAt, thisMonthStart), lt(orders.createdAt, nextMonthStart))),
   ]);
+
+  const availableYears = [...new Set(yearRows.map((r) => Number(r.yr)))]
+    .filter(Boolean)
+    .sort((a, b) => b - a);
+  if (!availableYears.includes(currentYear)) availableYears.unshift(currentYear);
 
   const totalRevenue = Number(allTime[0]?.revenue ?? 0);
   const totalOrders = Number(allTime[0]?.count ?? 0);
   const aov = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
   const thisMonthOrders = Number(thisMonth[0]?.count ?? 0);
-  const periodRevenue = Number(periodData[0]?.revenue ?? 0);
-  const periodOrders = Number(periodData[0]?.count ?? 0);
-
-  // Build full chart series with zero-fill
-  const dataMap = Object.fromEntries(
-    chartRaw.map((r) => [r.label, { revenue: Number(r.revenue), orders: Number(r.count) }])
-  );
-  const labels = selectedMonth
-    ? daysInMonth(selectedYear, selectedMonth)
-    : monthsInYear(selectedYear);
-  const chartData = labels.map((label) => ({
-    label,
-    revenue: dataMap[label]?.revenue ?? 0,
-    orders: dataMap[label]?.orders ?? 0,
-  }));
 
   const periodLabel = selectedMonth
     ? `${MONTH_LABELS[selectedMonth - 1]} ${selectedYear}`
@@ -198,50 +140,16 @@ export default async function AnalyticsPage({
         </div>
       </div>
 
-      {/* Period summary */}
-      <div className="flex items-center gap-6 mb-6 text-sm text-gray-400">
-        <span>
-          <span className="text-white font-medium">₹{periodRevenue.toLocaleString("en-IN")}</span> revenue
-        </span>
-        <span>
-          <span className="text-white font-medium">{periodOrders}</span> orders
-        </span>
-        <span className="text-gray-600">— {periodLabel}</span>
-      </div>
-
-      <AnalyticsCharts
-        data={chartData}
-        isMonthly={!selectedMonth}
-        periodLabel={periodLabel}
-      />
-
-      {topProducts.length > 0 && (
-        <div className="mt-8 bg-gray-900 border border-gray-800 rounded overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-800">
-            <h3 className="text-gray-300 text-sm font-medium">
-              Top Products — {periodLabel}
-            </h3>
-          </div>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-800">
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Product</th>
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Units Sold</th>
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Revenue</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topProducts.map((p, i) => (
-                <tr key={`${p.productName}-${i}`} className="border-b border-gray-800 last:border-0 hover:bg-gray-800/40">
-                  <td className="px-5 py-3 text-gray-200">{p.productName}</td>
-                  <td className="px-5 py-3 text-gray-400">{p.qty}</td>
-                  <td className="px-5 py-3 text-amber-400">₹{Number(p.revenue).toLocaleString("en-IN")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Period-specific content streams in independently */}
+      <Suspense fallback={<ChartsSkeleton />}>
+        <PeriodCharts
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          periodStart={periodStart}
+          periodEnd={periodEnd}
+          periodLabel={periodLabel}
+        />
+      </Suspense>
     </div>
   );
 }

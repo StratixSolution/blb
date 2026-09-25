@@ -31,7 +31,9 @@ export async function POST(req: NextRequest) {
     const discount =
       coupon.type === "percentage"
         ? Math.round((cartTotal * coupon.amount) / 100)
-        : Math.min(coupon.amount, cartTotal);
+        : coupon.type === "flat_total"
+          ? Math.max(0, cartTotal - coupon.amount)
+          : Math.min(coupon.amount, cartTotal);
 
     return NextResponse.json({
       valid: true,
