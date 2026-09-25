@@ -181,7 +181,7 @@ export default async function OrdersPage({
                   <tr key={order.id} className="border-b border-gray-800 last:border-0 hover:bg-gray-800/40 cursor-pointer">
                     <td className={cell}>
                       <Link href={href} className={`${inner} text-amber-400 font-mono text-xs`}>
-                        #{order.id.slice(-8).toUpperCase()}
+                        {order.orderNumber ?? `#${order.id.slice(-8).toUpperCase()}`}
                       </Link>
                     </td>
                     <td className={cell}>

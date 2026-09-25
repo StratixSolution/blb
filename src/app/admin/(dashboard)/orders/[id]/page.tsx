@@ -25,7 +25,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           ← Orders
         </Link>
         <h1 className="text-white text-2xl font-semibold">
-          Order #{order.id.slice(-8).toUpperCase()}
+          {order.orderNumber ?? `#${order.id.slice(-8).toUpperCase()}`}
         </h1>
         <span className="text-gray-500 text-sm">{order.createdAt.slice(0, 10)}</span>
       </div>

@@ -20,12 +20,14 @@ export const orders = sqliteTable("orders", {
   trackingRef: text("tracking_ref"),
   trackingVendor: text("tracking_vendor"),
   invoiceNumber: text("invoice_number"),
+  orderNumber: text("order_number"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 }, (t) => ({
   createdAtIdx: index("idx_orders_created_at").on(t.createdAt),
   statusIdx: index("idx_orders_status").on(t.status),
   invoiceNumberIdx: index("idx_orders_invoice_number").on(t.invoiceNumber),
+  orderNumberIdx: index("idx_orders_order_number").on(t.orderNumber),
 }));
 
 export const orderItems = sqliteTable("order_items", {

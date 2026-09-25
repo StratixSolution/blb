@@ -5,6 +5,7 @@ import { db } from "@/db/client";
 import { orders, orderItems, customers, coupons, pendingOrders } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { esc } from "@/lib/htmlEscape";
+import { generateOrderNumber } from "@/lib/orderNumber";
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,10 +43,13 @@ export async function POST(req: NextRequest) {
     const appliedDiscount = pending.discount;
     const couponCode = pending.couponCode;
 
+    const orderNumber = await generateOrderNumber();
+
     await db.insert(orders).values({
       id: razorpay_order_id,
       paymentId: razorpay_payment_id,
       status: "processing",
+      orderNumber,
       customerName: customer.name,
       customerEmail: customer.email,
       customerPhone: customer.phone ?? "",
@@ -114,7 +118,7 @@ export async function POST(req: NextRequest) {
     // Clean up pending order
     await db.delete(pendingOrders).where(eq(pendingOrders.id, razorpay_order_id));
 
-    sendOrderConfirmation({ customer, lineItems, orderId: razorpay_order_id, paymentId: razorpay_payment_id })
+    sendOrderConfirmation({ customer, lineItems, orderId: razorpay_order_id, orderNumber, paymentId: razorpay_payment_id })
       .catch((err) => console.error("Order confirmation email failed (order saved):", err));
 
     return NextResponse.json({ success: true });
@@ -128,11 +132,13 @@ async function sendOrderConfirmation({
   customer,
   lineItems,
   orderId,
+  orderNumber,
   paymentId,
 }: {
   customer: { name: string; email: string; address: string; city: string; pincode: string };
   lineItems: Array<{ productName: string; price: number; quantity: number }>;
   orderId: string;
+  orderNumber: string;
   paymentId: string;
 }) {
   const transporter = nodemailer.createTransport({
@@ -152,7 +158,7 @@ async function sendOrderConfirmation({
     from: `"Bean Leaf Brew" <${process.env.SMTP_FROM ?? process.env.SMTP_USER}>`,
     to: customer.email,
     bcc: process.env.ADMIN_EMAIL,
-    subject: `Order Confirmed - Bean Leaf Brew #${orderId.slice(-8).toUpperCase()}`,
+    subject: `Order Confirmed - Bean Leaf Brew ${orderNumber}`,
     html: `
       <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; color: #1A0E08;">
         <div style="background: #1A0E08; padding: 24px; text-align: center;">
@@ -161,7 +167,7 @@ async function sendOrderConfirmation({
         <div style="padding: 32px; background: #F7F0E6;">
           <h2 style="color: #4A2512;">Order Confirmed!</h2>
           <p>Hi ${esc(customer.name)}, thank you for your order.</p>
-          <p style="color: #8B5E3C; font-size: 13px;">Order ID: ${esc(orderId)}</p>
+          <p style="color: #8B5E3C; font-size: 13px;">Order: ${esc(orderNumber)}</p>
           <div style="background: #EAD9C8; padding: 16px; margin: 20px 0;">
             <h3 style="margin-top: 0;">Items Ordered</h3>
             <pre style="font-family: inherit; white-space: pre-wrap;">${esc(itemLines)}</pre>

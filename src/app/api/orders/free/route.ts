@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { orders, orderItems, customers, coupons, products } from "@/db/schema";
 import { eq, sql, inArray } from "drizzle-orm";
 import { esc } from "@/lib/htmlEscape";
+import { generateOrderNumber } from "@/lib/orderNumber";
 
 export async function POST(req: NextRequest) {
   try {
@@ -71,11 +72,13 @@ export async function POST(req: NextRequest) {
     const orderId = `free_${Date.now()}`;
     const paymentId = `coupon_${validatedCouponCode ?? "free"}`;
     const now = new Date().toISOString();
+    const orderNumber = await generateOrderNumber();
 
     await db.insert(orders).values({
       id: orderId,
       paymentId,
       status: "processing",
+      orderNumber,
       customerName: customer.name,
       customerEmail: customer.email,
       customerPhone: customer.phone ?? "",
@@ -140,7 +143,7 @@ export async function POST(req: NextRequest) {
         .where(eq(coupons.code, validatedCouponCode));
     }
 
-    sendOrderConfirmation({ customer, lineItems, orderId, paymentId, discount })
+    sendOrderConfirmation({ customer, lineItems, orderId, orderNumber, paymentId, discount })
       .catch((err) => console.error("Order confirmation email failed (order saved):", err));
 
     return NextResponse.json({ success: true });
@@ -154,12 +157,14 @@ async function sendOrderConfirmation({
   customer,
   lineItems,
   orderId,
+  orderNumber,
   paymentId,
   discount,
 }: {
   customer: { name: string; email: string; address: string; city: string; pincode: string };
   lineItems: Array<{ productName: string; price: number; quantity: number }>;
   orderId: string;
+  orderNumber: string;
   paymentId: string;
   discount: number;
 }) {
@@ -180,7 +185,7 @@ async function sendOrderConfirmation({
     from: `"Bean Leaf Brew" <${process.env.SMTP_FROM ?? process.env.SMTP_USER}>`,
     to: customer.email,
     bcc: process.env.ADMIN_EMAIL,
-    subject: `Order Confirmed - Bean Leaf Brew #${orderId.slice(-8).toUpperCase()}`,
+    subject: `Order Confirmed - Bean Leaf Brew ${orderNumber}`,
     html: `
       <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; color: #1A0E08;">
         <div style="background: #1A0E08; padding: 24px; text-align: center;">
