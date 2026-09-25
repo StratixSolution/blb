@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await req.json();
-  const { status, trackingRef, trackingVendor, note, noteType } = body;
+  const { status, trackingRef, trackingVendor, invoiceNumber, note, noteType } = body;
 
   if (note?.trim()) {
     await db.insert(orderNotes).values({
@@ -22,7 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
   }
 
-  if (status || trackingRef !== undefined || trackingVendor !== undefined) {
+  if (status || trackingRef !== undefined || trackingVendor !== undefined || invoiceNumber !== undefined) {
     const [order] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
@@ -30,6 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (status) updates.status = status;
     if (trackingRef !== undefined) updates.trackingRef = trackingRef || null;
     if (trackingVendor !== undefined) updates.trackingVendor = trackingVendor || null;
+    if (invoiceNumber !== undefined) updates.invoiceNumber = invoiceNumber?.trim() || null;
 
     await db.update(orders).set(updates).where(eq(orders.id, id));
 

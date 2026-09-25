@@ -13,6 +13,12 @@ const statusColor: Record<string, string> = {
   pending: "bg-gray-800 text-gray-300",
 };
 
+const NEXT_STATUS: Record<string, { key: string; label: string }> = {
+  pending:    { key: "processing", label: "Move to Processing" },
+  processing: { key: "shipped",    label: "Mark as Shipped" },
+  shipped:    { key: "delivered",  label: "Mark as Delivered" },
+};
+
 interface Props {
   orderId: string;
   currentStatus: string;
@@ -34,21 +40,42 @@ export function OrderStatusUpdater({ orderId, currentStatus, currentTrackingRef,
     trackingRef !== (currentTrackingRef ?? "") ||
     trackingVendor !== (currentTrackingVendor ?? "");
 
-  async function handleSave() {
+  async function save(overrides?: { status?: string }) {
     setSaving(true);
+    const nextStatus = overrides?.status ?? status;
     await fetch(`/api/admin/orders/${orderId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, trackingRef: trackingRef.trim() || null, trackingVendor: trackingVendor.trim() || null }),
+      body: JSON.stringify({
+        status: nextStatus,
+        trackingRef: trackingRef.trim() || null,
+        trackingVendor: trackingVendor.trim() || null,
+      }),
     });
+    if (overrides?.status) setStatus(overrides.status);
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
     router.refresh();
   }
 
+  const suggestion = NEXT_STATUS[currentStatus];
+
   return (
     <div className="space-y-4">
+      {suggestion && (
+        <div className="flex items-center gap-3 p-3 bg-gray-800/50 border border-gray-700/50 rounded">
+          <span className="text-gray-500 text-xs">Next step:</span>
+          <button
+            onClick={() => save({ status: suggestion.key })}
+            disabled={saving}
+            className="text-xs font-medium text-amber-400 hover:text-amber-300 disabled:opacity-40 transition-colors"
+          >
+            {suggestion.label} →
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center gap-3 flex-wrap">
         <select
           value={status}
@@ -59,11 +86,8 @@ export function OrderStatusUpdater({ orderId, currentStatus, currentTrackingRef,
             <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
         </select>
-        <span className={`text-xs px-2 py-0.5 rounded font-medium capitalize ${statusColor[status] ?? "bg-gray-800 text-gray-300"}`}>
-          {status}
-        </span>
         <button
-          onClick={handleSave}
+          onClick={() => save()}
           disabled={saving || !changed}
           className="ml-auto bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white text-xs font-medium px-4 py-2 transition-colors"
         >
@@ -108,7 +132,7 @@ export function OrderStatusUpdater({ orderId, currentStatus, currentTrackingRef,
 
       {status === "shipped" && currentStatus !== "shipped" && (
         <p className="text-blue-400 text-xs">
-          A dispatch email will be sent to the customer when you click Update.
+          A dispatch email will be sent to the customer when you save.
           {(trackingRef.trim() || trackingVendor.trim()) && " Tracking details will be included."}
         </p>
       )}

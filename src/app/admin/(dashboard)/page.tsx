@@ -1,7 +1,8 @@
 import { db } from "@/db/client";
 import { orders, customers } from "@/db/schema";
-import { sql, gte } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import Link from "next/link";
+import { OrderPipeline } from "./OrderPipeline";
 
 export default async function AdminDashboard() {
   const [allOrders, allCustomers] = await Promise.all([
@@ -14,27 +15,41 @@ export default async function AdminDashboard() {
     .select({ sum: sql<number>`coalesce(sum(${orders.total}), 0)` })
     .from(orders);
 
-  const statusCounts = await db
-    .select({ status: orders.status, count: sql<number>`count(*)` })
+  const statusStats = await db
+    .select({
+      status: orders.status,
+      count: sql<number>`count(*)`,
+      total: sql<number>`coalesce(sum(${orders.total}), 0)`,
+    })
     .from(orders)
     .groupBy(orders.status);
 
-  const countMap = Object.fromEntries(statusCounts.map((r) => [r.status, r.count]));
-  const totalOrders = statusCounts.reduce((s, r) => s + Number(r.count), 0);
+  const byStatus = Object.fromEntries(
+    statusStats.map((r) => [r.status, { count: Number(r.count), total: Number(r.total) }])
+  );
+  const totalOrders = statusStats.reduce((s, r) => s + Number(r.count), 0);
 
   const stats = [
     { label: "Total Revenue", value: `₹${(revenueAllTime[0]?.sum ?? 0).toLocaleString("en-IN")}` },
     { label: "Total Orders", value: totalOrders },
     { label: "Customers", value: allCustomers.length },
-    { label: "Pending / Processing", value: (Number(countMap["pending"] ?? 0) + Number(countMap["processing"] ?? 0)) },
+    { label: "Pending / Processing", value: (byStatus["pending"]?.count ?? 0) + (byStatus["processing"]?.count ?? 0) },
+  ];
+
+  const pipelineStages = [
+    { key: "pending",    label: "Pending",    count: byStatus["pending"]?.count    ?? 0, total: byStatus["pending"]?.total    ?? 0 },
+    { key: "processing", label: "Processing", count: byStatus["processing"]?.count ?? 0, total: byStatus["processing"]?.total ?? 0 },
+    { key: "shipped",    label: "Shipped",    count: byStatus["shipped"]?.count    ?? 0, total: byStatus["shipped"]?.total    ?? 0 },
+    { key: "delivered",  label: "Delivered",  count: byStatus["delivered"]?.count  ?? 0, total: byStatus["delivered"]?.total  ?? 0 },
+    { key: "cancelled",  label: "Cancelled",  count: byStatus["cancelled"]?.count  ?? 0, total: byStatus["cancelled"]?.total  ?? 0 },
   ];
 
   const statusColor: Record<string, string> = {
     processing: "bg-yellow-900 text-yellow-300",
-    shipped: "bg-blue-900 text-blue-300",
-    delivered: "bg-green-900 text-green-300",
-    cancelled: "bg-red-900 text-red-300",
-    pending: "bg-gray-800 text-gray-300",
+    shipped:    "bg-blue-900 text-blue-300",
+    delivered:  "bg-green-900 text-green-300",
+    cancelled:  "bg-red-900 text-red-300",
+    pending:    "bg-gray-800 text-gray-300",
   };
 
   return (
@@ -48,6 +63,16 @@ export default async function AdminDashboard() {
             <p className="text-white text-2xl font-semibold">{s.value}</p>
           </div>
         ))}
+      </div>
+
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-white text-lg font-medium">Order Pipeline</h2>
+          <Link href="/admin/orders?status=all" className="text-amber-400 hover:text-amber-300 text-xs">
+            View all →
+          </Link>
+        </div>
+        <OrderPipeline stages={pipelineStages} />
       </div>
 
       <h2 className="text-white text-lg font-medium mb-4">Recent Orders</h2>

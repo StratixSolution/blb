@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { OrderStatusUpdater } from "./OrderStatusUpdater";
 import { OrderNotes } from "./OrderNotes";
+import { InvoiceSection } from "./InvoiceSection";
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -81,7 +82,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded p-5 mb-6">
-        <h2 className="text-gray-400 text-xs uppercase tracking-wider mb-4">Status & Dispatch</h2>
+        <h2 className="text-gray-400 text-xs uppercase tracking-wider mb-3">Invoice</h2>
+        <InvoiceSection orderId={order.id} currentInvoiceNumber={order.invoiceNumber ?? null} />
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-gray-400 text-xs uppercase tracking-wider">Status & Dispatch</h2>
+        </div>
         <div className="grid grid-cols-2 gap-4 mb-5 text-xs">
           <div>
             <p className="text-gray-500 mb-0.5">Razorpay Order ID</p>

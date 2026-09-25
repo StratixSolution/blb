@@ -21,6 +21,7 @@ interface DbProduct {
   blend: string | null;
   inStock: number | boolean;
   featured: number | boolean;
+  ean: string | null;
 }
 
 interface ProductFormData {
@@ -34,6 +35,7 @@ interface ProductFormData {
   weight: string;
   roast: string;
   blend: string;
+  ean: string;
   notes: string;
   tags: string;
   inStock: boolean;
@@ -43,7 +45,7 @@ interface ProductFormData {
 
 const EMPTY_FORM: ProductFormData = {
   name: "", slug: "", category: "ground-coffee", price: "", regularPrice: "",
-  shortDescription: "", description: "", weight: "", roast: "", blend: "",
+  shortDescription: "", description: "", weight: "", roast: "", blend: "", ean: "",
   notes: "", tags: "", inStock: true, featured: false, images: [],
 };
 
@@ -52,7 +54,7 @@ function toForm(p: DbProduct): ProductFormData {
     name: p.name, slug: p.slug, category: p.category,
     price: String(p.price), regularPrice: p.regularPrice ? String(p.regularPrice) : "",
     shortDescription: p.shortDescription, description: p.description,
-    weight: p.weight ?? "", roast: p.roast ?? "", blend: p.blend ?? "",
+    weight: p.weight ?? "", roast: p.roast ?? "", blend: p.blend ?? "", ean: p.ean ?? "",
     notes: (JSON.parse(p.notes || "[]") as string[]).join(", "),
     tags: (JSON.parse(p.tags || "[]") as string[]).join(", "),
     inStock: Boolean(p.inStock), featured: Boolean(p.featured),
@@ -177,6 +179,7 @@ function ProductModal({
       regularPrice: form.regularPrice ? Number(form.regularPrice) : null,
       notes: splitComma(form.notes),
       tags: splitComma(form.tags),
+      ean: form.ean.trim() || null,
     };
 
     const url = editId ? `/api/admin/products/${editId}` : "/api/admin/products";
@@ -245,7 +248,7 @@ function ProductModal({
             <textarea className={inputCls + " resize-none"} rows={4} value={form.description} onChange={(e) => set("description", e.target.value)} />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div>
               <label className={labelCls}>Weight</label>
               <input className={inputCls} value={form.weight} onChange={(e) => set("weight", e.target.value)} placeholder="e.g. 250g" />
@@ -257,6 +260,10 @@ function ProductModal({
             <div>
               <label className={labelCls}>Blend</label>
               <input className={inputCls} value={form.blend} onChange={(e) => set("blend", e.target.value)} placeholder="e.g. 100% Pure Coffee" />
+            </div>
+            <div>
+              <label className={labelCls}>EAN Barcode</label>
+              <input className={inputCls} value={form.ean} onChange={(e) => set("ean", e.target.value)} placeholder="e.g. 0745604911184" />
             </div>
           </div>
 

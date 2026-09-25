@@ -98,6 +98,7 @@ export async function POST(req: NextRequest) {
       }))
     );
 
+
     const existing = await db
       .select()
       .from(customers)

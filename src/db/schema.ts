@@ -19,11 +19,13 @@ export const orders = sqliteTable("orders", {
   couponCode: text("coupon_code"),
   trackingRef: text("tracking_ref"),
   trackingVendor: text("tracking_vendor"),
+  invoiceNumber: text("invoice_number"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 }, (t) => ({
   createdAtIdx: index("idx_orders_created_at").on(t.createdAt),
   statusIdx: index("idx_orders_status").on(t.status),
+  invoiceNumberIdx: index("idx_orders_invoice_number").on(t.invoiceNumber),
 }));
 
 export const orderItems = sqliteTable("order_items", {
@@ -86,6 +88,7 @@ export const products = sqliteTable("products", {
   roast: text("roast"),
   blend: text("blend"),
   featured: integer("featured", { mode: "boolean" }).notNull().default(false),
+  ean: text("ean"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 }, (t) => ({
@@ -103,6 +106,13 @@ export const orderNotes = sqliteTable("order_notes", {
   orderIdIdx: index("idx_order_notes_order_id").on(t.orderId),
 }));
 
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  label: text("label").notNull().default(""),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+});
+
 export const pendingOrders = sqliteTable("pending_orders", {
   id: text("id").primaryKey(),
   amountPaise: integer("amount_paise").notNull(),
@@ -112,6 +122,7 @@ export const pendingOrders = sqliteTable("pending_orders", {
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
 
+export type Setting = typeof settings.$inferSelect;
 export type PendingOrder = typeof pendingOrders.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderNote = typeof orderNotes.$inferSelect;
