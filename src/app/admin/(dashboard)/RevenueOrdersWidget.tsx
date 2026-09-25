@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Period = "current" | "1m" | "3m";
 
@@ -10,6 +11,7 @@ interface Props {
 
 export function RevenueOrdersWidget({ data }: Props) {
   const [period, setPeriod] = useState<Period>("current");
+  const router = useRouter();
   const { revenue, orders } = data[period];
 
   return (
@@ -37,16 +39,21 @@ export function RevenueOrdersWidget({ data }: Props) {
           </button>
         </div>
       </div>
-      <div className="flex items-baseline gap-8">
+      <div
+        className="flex items-baseline gap-8 cursor-pointer group"
+        onClick={() => router.push("/admin/analytics")}
+        title="View in Analytics"
+      >
         <div className="flex items-baseline gap-3">
           <p className="text-gray-500 text-xs">Revenue</p>
-          <p className="text-white text-2xl font-semibold">₹{revenue.toLocaleString("en-IN")}</p>
+          <p className="text-white text-2xl font-semibold group-hover:text-amber-400 transition-colors">₹{revenue.toLocaleString("en-IN")}</p>
         </div>
         <div className="w-px h-6 bg-gray-700" />
         <div className="flex items-baseline gap-3">
           <p className="text-gray-500 text-xs">Orders</p>
-          <p className="text-white text-2xl font-semibold">{orders}</p>
+          <p className="text-white text-2xl font-semibold group-hover:text-amber-400 transition-colors">{orders}</p>
         </div>
+        <span className="text-gray-600 text-xs group-hover:text-amber-500 transition-colors ml-auto">View analytics →</span>
       </div>
     </div>
   );
