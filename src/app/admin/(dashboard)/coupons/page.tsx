@@ -1,7 +1,7 @@
 import { db } from "@/db/client";
 import { coupons } from "@/db/schema";
 import { desc } from "drizzle-orm";
-import { CreateCouponForm, DeleteCouponButton, ToggleCouponButton } from "./CouponActions";
+import { CreateCouponForm, DeleteCouponButton, EditCouponButton, ToggleCouponButton } from "./CouponActions";
 import { CouponsTabs } from "./CouponsTabs";
 
 export default async function CouponsPage() {
@@ -25,59 +25,59 @@ export default async function CouponsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-800">
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Code</th>
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Attribution</th>
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Type</th>
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Amount</th>
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Min Order</th>
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Usage</th>
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Expires</th>
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Status</th>
-                <th className="px-5 py-3"></th>
+                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-4 py-3">Code</th>
+                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-4 py-3">Attribution</th>
+                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-4 py-3">Discount</th>
+                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-4 py-3">Usage</th>
+                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-4 py-3">Expires</th>
+                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-4 py-3">Status</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {allCoupons.map((coupon) => {
                 const expired = coupon.expiresAt && new Date(coupon.expiresAt) < new Date();
                 return (
-                  <tr key={coupon.id} className="border-b border-gray-800 hover:bg-gray-800/40">
-                    <td className="px-5 py-3">
+                  <tr key={coupon.id} className="border-b border-gray-800 last:border-0 hover:bg-gray-800/40">
+                    <td className="px-4 py-3">
                       <span className="font-mono text-amber-400 font-medium text-xs tracking-wider">
                         {coupon.code}
                       </span>
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-3">
                       {coupon.referencedTo ? (
                         <span className="text-purple-400 text-xs font-medium">{coupon.referencedTo}</span>
                       ) : (
                         <span className="text-gray-700 text-xs">-</span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-gray-400 capitalize">{coupon.type}</td>
-                    <td className="px-5 py-3 text-gray-200">
+                    <td className="px-4 py-3 text-gray-200 text-xs">
                       {coupon.type === "percentage" ? `${coupon.amount}%` : `₹${coupon.amount}`}
+                      {coupon.type !== "percentage" && coupon.type !== "fixed" && (
+                        <span className="text-gray-500 ml-1 capitalize">({coupon.type})</span>
+                      )}
                     </td>
-                    <td className="px-5 py-3 text-gray-400">
-                      {coupon.minOrderAmount > 0 ? `₹${coupon.minOrderAmount}` : "-"}
-                    </td>
-                    <td className="px-5 py-3 text-gray-400">
+                    <td className="px-4 py-3 text-gray-400 text-xs">
                       {coupon.usesCount}
                       {coupon.maxUses !== null ? ` / ${coupon.maxUses}` : " / ∞"}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-3">
                       {coupon.expiresAt ? (
-                        <span className={expired ? "text-red-400 text-xs" : "text-gray-400 text-xs"}>
+                        <span className={`text-xs ${expired ? "text-red-400" : "text-gray-400"}`}>
                           {coupon.expiresAt}
                         </span>
                       ) : (
                         <span className="text-gray-600 text-xs">Never</span>
                       )}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-3">
                       <ToggleCouponButton id={coupon.id} active={coupon.active} />
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <DeleteCouponButton id={coupon.id} />
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <EditCouponButton coupon={coupon} />
+                        <DeleteCouponButton id={coupon.id} />
+                      </div>
                     </td>
                   </tr>
                 );
