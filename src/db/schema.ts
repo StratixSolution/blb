@@ -70,6 +70,7 @@ export const coupons = sqliteTable("coupons", {
   usesCount: integer("uses_count").notNull().default(0),
   expiresAt: text("expires_at"),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
+  referencedTo: text("referenced_to"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
 

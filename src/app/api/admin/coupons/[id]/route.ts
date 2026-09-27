@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { coupons } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-const ALLOWED_COUPON_FIELDS = ["type", "amount", "minOrderAmount", "maxUses", "expiresAt", "active", "code"] as const;
+const ALLOWED_COUPON_FIELDS = ["type", "amount", "minOrderAmount", "maxUses", "expiresAt", "active", "code", "referencedTo"] as const;
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauth = await requireAdmin();

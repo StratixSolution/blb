@@ -26,6 +26,7 @@ export default async function CouponsPage() {
             <thead>
               <tr className="border-b border-gray-800">
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Code</th>
+                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Influencer</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Type</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Amount</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Min Order</th>
@@ -44,6 +45,13 @@ export default async function CouponsPage() {
                       <span className="font-mono text-amber-400 font-medium text-xs tracking-wider">
                         {coupon.code}
                       </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      {coupon.referencedTo ? (
+                        <span className="text-purple-400 text-xs font-medium">{coupon.referencedTo}</span>
+                      ) : (
+                        <span className="text-gray-700 text-xs">-</span>
+                      )}
                     </td>
                     <td className="px-5 py-3 text-gray-400 capitalize">{coupon.type}</td>
                     <td className="px-5 py-3 text-gray-200">

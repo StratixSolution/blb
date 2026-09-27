@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (unauth) return unauth;
 
   const body = await req.json();
-  const { code, type, amount, minOrderAmount, maxUses, expiresAt } = body;
+  const { code, type, amount, minOrderAmount, maxUses, expiresAt, referencedTo } = body;
 
   if (!code || !type || !amount) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
         minOrderAmount: Number(minOrderAmount ?? 0),
         maxUses: maxUses ? Number(maxUses) : null,
         expiresAt: expiresAt || null,
+        referencedTo: referencedTo?.trim() || null,
         active: true,
       })
       .returning();

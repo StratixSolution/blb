@@ -15,6 +15,7 @@ export function CreateCouponForm() {
     minOrderAmount: "",
     maxUses: "",
     expiresAt: "",
+    referencedTo: "",
   });
 
   function set(k: keyof typeof form, v: string) {
@@ -32,7 +33,7 @@ export function CreateCouponForm() {
     });
     if (res.ok) {
       setOpen(false);
-      setForm({ code: "", type: "percentage", amount: "", minOrderAmount: "", maxUses: "", expiresAt: "" });
+      setForm({ code: "", type: "percentage", amount: "", minOrderAmount: "", maxUses: "", expiresAt: "", referencedTo: "" });
       router.refresh();
     } else {
       const d = await res.json();
@@ -117,6 +118,15 @@ export function CreateCouponForm() {
                 className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 focus:outline-none focus:border-amber-500"
               />
             </div>
+          </div>
+          <div>
+            <label className="text-gray-400 text-xs uppercase tracking-wider block mb-1">Influencer / Referenced To</label>
+            <input
+              value={form.referencedTo}
+              onChange={(e) => set("referencedTo", e.target.value)}
+              placeholder="e.g. @john_doe"
+              className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 focus:outline-none focus:border-amber-500"
+            />
           </div>
           <div>
             <label className="text-gray-400 text-xs uppercase tracking-wider block mb-1">Expires At</label>
