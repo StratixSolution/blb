@@ -18,7 +18,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/admin/products", label: "Products" },
     { href: "/admin/customers", label: "Customers" },
     { href: "/admin/coupons", label: "Coupons" },
-    { href: "/admin/influencers", label: "Influencers" },
     { href: "/admin/settings", label: "Settings" },
   ];
 

@@ -2,19 +2,19 @@ import { db } from "@/db/client";
 import { coupons } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { CreateCouponForm, DeleteCouponButton, ToggleCouponButton } from "./CouponActions";
+import { CouponsTabs } from "./CouponsTabs";
 
 export default async function CouponsPage() {
   const allCoupons = await db.select().from(coupons).orderBy(desc(coupons.createdAt));
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-white text-2xl font-semibold">Coupons</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{allCoupons.length} total</p>
-        </div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-white text-2xl font-semibold">Coupons</h1>
         <CreateCouponForm />
       </div>
+
+      <CouponsTabs active="coupons" />
 
       {allCoupons.length === 0 ? (
         <div className="bg-gray-900 border border-gray-800 rounded p-12 text-center">
@@ -26,7 +26,7 @@ export default async function CouponsPage() {
             <thead>
               <tr className="border-b border-gray-800">
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Code</th>
-                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Influencer</th>
+                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Attribution</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Type</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Amount</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Min Order</th>

@@ -120,11 +120,11 @@ export function CreateCouponForm() {
             </div>
           </div>
           <div>
-            <label className="text-gray-400 text-xs uppercase tracking-wider block mb-1">Influencer / Referenced To</label>
+            <label className="text-gray-400 text-xs uppercase tracking-wider block mb-1">Attribution</label>
             <input
               value={form.referencedTo}
               onChange={(e) => set("referencedTo", e.target.value)}
-              placeholder="e.g. @john_doe"
+              placeholder="e.g. @john_doe, Diwali2026, Google Ads"
               className="w-full bg-gray-800 border border-gray-700 text-white text-sm px-3 py-2 focus:outline-none focus:border-amber-500"
             />
           </div>
