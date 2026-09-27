@@ -51,11 +51,16 @@ export async function PeriodCharts({ periodStart, periodEnd, periodLabel, groupB
   const periodOrders  = Number(periodData[0]?.count ?? 0);
 
   // Build a full label sequence so empty days/months still render as 0
+  // Cap at today so future days/months don't show as empty
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const todayMonthStr = todayStr.slice(0, 7);
+
   const labels: string[] = [];
   if (groupByDay) {
     const d = new Date(periodStart);
     const endDate = new Date(periodEnd);
-    while (d < endDate) {
+    while (d < endDate && d.toISOString().slice(0, 10) <= todayStr) {
       labels.push(d.toISOString().slice(0, 10));
       d.setDate(d.getDate() + 1);
     }
@@ -63,7 +68,9 @@ export async function PeriodCharts({ periodStart, periodEnd, periodLabel, groupB
     const d = new Date(periodStart);
     const endDate = new Date(periodEnd);
     while (d < endDate) {
-      labels.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+      const label = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (label > todayMonthStr) break;
+      labels.push(label);
       d.setMonth(d.getMonth() + 1);
     }
   }
