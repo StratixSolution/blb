@@ -149,7 +149,8 @@ export function CheckoutClient() {
               clearCart();
               window.location.href = "/checkout/success";
             } else {
-              setError("Payment received but order confirmation failed. Please contact us with your payment ID.");
+              const errData = await verify.json().catch(() => ({}));
+              setError(`Payment received but order confirmation failed (${verify.status}: ${errData.error ?? "unknown"}). Payment ID: ${response.razorpay_payment_id}`);
               setLoading(false);
             }
           },
