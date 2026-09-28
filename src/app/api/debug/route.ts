@@ -7,6 +7,7 @@ import { desc, sql } from "drizzle-orm";
 export async function GET() {
   const secret = process.env.RAZORPAY_KEY_SECRET ?? "";
   const keyId = process.env.RAZORPAY_KEY_ID ?? "";
+  const publicKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "NOT_SET";
   const tursoUrl = process.env.TURSO_DATABASE_URL ?? "";
 
   let pendingCount = 0;
@@ -32,6 +33,7 @@ export async function GET() {
 
   return NextResponse.json({
     razorpay_key_id: keyId,
+    razorpay_public_key_id: publicKeyId,
     razorpay_secret_length: secret.length,
     razorpay_secret_prefix: secret.slice(0, 4),
     razorpay_secret_suffix: secret.slice(-4),
