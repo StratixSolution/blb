@@ -92,10 +92,10 @@ export async function POST(req: NextRequest) {
       total: 0,
       discount,
       couponCode: validatedCouponCode,
-      sourceType: attribution?.sourceType ?? null,
-      utmSource: attribution?.utmSource ?? null,
-      utmMedium: attribution?.utmMedium ?? null,
-      utmCampaign: attribution?.utmCampaign ?? null,
+      sourceType: attribution?.sourceType?.slice(0, 50) ?? null,
+      utmSource: attribution?.utmSource?.slice(0, 200) ?? null,
+      utmMedium: attribution?.utmMedium?.slice(0, 100) ?? null,
+      utmCampaign: attribution?.utmCampaign?.slice(0, 300) ?? null,
     });
 
     await db.insert(orderItems).values(

@@ -14,6 +14,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json();
   const { status, trackingRef, trackingVendor, invoiceNumber, note, noteType } = body;
 
+  const ALLOWED_STATUSES = ["pending", "processing", "shipped", "delivered", "cancelled"];
+  if (status && !ALLOWED_STATUSES.includes(status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+
   if (note?.trim()) {
     await db.insert(orderNotes).values({
       orderId: id,

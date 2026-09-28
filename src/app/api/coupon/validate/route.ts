@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { coupons } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const INVALID = NextResponse.json({ error: "Invalid or expired coupon code" }, { status: 400 });
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
+  const rl = checkRateLimit(`coupon:${ip}`, 20, 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
+
   try {
     const { code, cartTotal } = await req.json();
     if (!code) return NextResponse.json({ error: "No code provided" }, { status: 400 });
