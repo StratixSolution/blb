@@ -128,6 +128,7 @@ export function CheckoutClient() {
           name: "Bean Leaf Brew",
           description: "Coffee Order",
           order_id: data.id,
+          callback_url: `${window.location.origin}/api/razorpay/callback`,
           prefill: {
             name: form.name,
             email: form.email,
