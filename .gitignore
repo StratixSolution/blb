@@ -42,6 +42,10 @@ yarn-error.log*
 *.db-wal
 *.db.backup-*
 
+# Data/spreadsheet files
+*.xlsx
+*.csv
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
