@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
       .digest("hex");
 
     if (expectedSignature !== razorpay_signature) {
+      console.error("Razorpay signature mismatch", { razorpay_order_id, razorpay_payment_id });
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
     const couponCode = pending.couponCode;
 
     const orderNumber = await generateOrderNumber();
+    console.log("Inserting order", { razorpay_order_id, orderNumber, total });
 
     await db.insert(orders).values({
       id: razorpay_order_id,
