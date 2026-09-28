@@ -8,11 +8,14 @@ import { esc } from "@/lib/htmlEscape";
 import { generateOrderNumber } from "@/lib/orderNumber";
 
 export async function POST(req: NextRequest) {
+  console.log("=== VERIFY CALLED ===", new Date().toISOString());
   try {
     const body = await req.json();
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, customer, attribution } = body;
+    console.log("Body parsed", { razorpay_order_id, razorpay_payment_id, has_customer: !!customer, has_sig: !!razorpay_signature });
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      console.error("Missing fields", { razorpay_order_id, razorpay_payment_id, razorpay_signature: !!razorpay_signature });
       return NextResponse.json({ error: "Missing payment fields" }, { status: 400 });
     }
 

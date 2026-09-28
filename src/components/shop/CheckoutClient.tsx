@@ -140,17 +140,22 @@ export function CheckoutClient() {
             },
           },
           handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-            const verify = await fetch("/api/razorpay/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ...response, customer: form, attribution }),
-            });
-            if (verify.ok) {
-              clearCart();
-              window.location.href = "/checkout/success";
-            } else {
-              const errData = await verify.json().catch(() => ({}));
-              setError(`Payment received but order confirmation failed (${verify.status}: ${errData.error ?? "unknown"}). Payment ID: ${response.razorpay_payment_id}`);
+            try {
+              const verify = await fetch("/api/razorpay/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ...response, customer: form, attribution }),
+              });
+              if (verify.ok) {
+                clearCart();
+                window.location.href = "/checkout/success";
+              } else {
+                const errData = await verify.json().catch(() => ({}));
+                setError(`Payment received but order confirmation failed (${verify.status}: ${errData.error ?? "unknown"}). Payment ID: ${response.razorpay_payment_id}`);
+                setLoading(false);
+              }
+            } catch (handlerErr) {
+              setError(`Payment received but confirmation request failed: ${handlerErr instanceof Error ? handlerErr.message : String(handlerErr)}. Payment ID: ${response.razorpay_payment_id}`);
               setLoading(false);
             }
           },
