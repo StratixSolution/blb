@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
+import { getStoredAttribution } from "@/lib/utmCapture";
 
 interface FormData {
   name: string;
@@ -82,13 +83,15 @@ export function CheckoutClient() {
     const cartItems = items.map((i) => ({ productId: i.product.id, quantity: i.quantity }));
     const couponCode = appliedCoupon?.code ?? null;
 
+    const attribution = getStoredAttribution();
+
     // Free order (100% coupon discount) - skip Razorpay
     if (finalTotal === 0) {
       try {
         const res = await fetch("/api/orders/free", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ customer: form, items: cartItems, couponCode }),
+          body: JSON.stringify({ customer: form, items: cartItems, couponCode, attribution }),
         });
         if (res.ok) {
           clearCart();
@@ -140,7 +143,7 @@ export function CheckoutClient() {
             const verify = await fetch("/api/razorpay/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ...response, customer: form }),
+              body: JSON.stringify({ ...response, customer: form, attribution }),
             });
             if (verify.ok) {
               clearCart();

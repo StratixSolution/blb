@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
+import { UtmTracker } from "@/components/UtmTracker";
 import "./globals.css";
 
 const inter = Inter({
@@ -31,6 +32,7 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/images/HB_01.webp" />
       </head>
       <body className={`${inter.variable} ${playfair.variable} antialiased`}>
+        <UtmTracker />
         {children}
         <WhatsAppButton />
       </body>

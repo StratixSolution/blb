@@ -21,6 +21,10 @@ export const orders = sqliteTable("orders", {
   trackingVendor: text("tracking_vendor"),
   invoiceNumber: text("invoice_number"),
   orderNumber: text("order_number"),
+  sourceType: text("source_type"),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 }, (t) => ({

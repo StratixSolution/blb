@@ -9,10 +9,11 @@ import { generateOrderNumber } from "@/lib/orderNumber";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { customer, items, couponCode } = body as {
+    const { customer, items, couponCode, attribution } = body as {
       customer: { name: string; email: string; phone?: string; address: string; city: string; state?: string; pincode: string };
       items: Array<{ productId: number; quantity: number }>;
       couponCode?: string | null;
+      attribution?: { sourceType: string; utmSource: string | null; utmMedium: string | null; utmCampaign: string | null } | null;
     };
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -91,6 +92,10 @@ export async function POST(req: NextRequest) {
       total: 0,
       discount,
       couponCode: validatedCouponCode,
+      sourceType: attribution?.sourceType ?? null,
+      utmSource: attribution?.utmSource ?? null,
+      utmMedium: attribution?.utmMedium ?? null,
+      utmCampaign: attribution?.utmCampaign ?? null,
     });
 
     await db.insert(orderItems).values(

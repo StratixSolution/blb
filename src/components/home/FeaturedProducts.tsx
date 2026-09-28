@@ -26,10 +26,10 @@ export function FeaturedProducts({ products }: Props) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {products.map((product) => (
-            <div key={product.id}>
-              <div className="group bg-[#FAFAF8] border border-[#D4C4B0] overflow-hidden hover:shadow-md transition-shadow">
-                <Link href={`/shop/${product.slug}`} className="block">
-                  <div className="relative h-60 bg-[#EAD9C8] overflow-hidden">
+            <div key={product.id} className="flex">
+              <div className="group bg-[#FAFAF8] border border-[#D4C4B0] overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full">
+                <Link href={`/shop/${product.slug}`} className="flex flex-col flex-1">
+                  <div className="relative h-60 bg-[#EAD9C8] overflow-hidden flex-shrink-0">
                     <Image
                       src={product.images[0]}
                       alt={product.name}
@@ -38,7 +38,7 @@ export function FeaturedProducts({ products }: Props) {
                       sizes="(max-width: 768px) 100vw, 33vw"
                     />
                   </div>
-                  <div className="p-5">
+                  <div className="p-5 flex-1">
                     <h3 className="font-serif text-lg text-[#1A0E08] mb-1">{product.name}</h3>
                     <p className="text-xs text-[#8B5E3C] leading-relaxed">{product.shortDescription}</p>
                     {product.notes && (
@@ -52,7 +52,7 @@ export function FeaturedProducts({ products }: Props) {
                     )}
                   </div>
                 </Link>
-                <div className="px-5 pb-5 flex items-center justify-between">
+                <div className="px-5 pb-5 flex items-center justify-between flex-shrink-0">
                   <span className="font-medium text-[#1A0E08]">{formatPrice(product.price)}</span>
                   <button
                     onClick={() => addItem(product)}

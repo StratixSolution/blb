@@ -93,6 +93,36 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <InvoiceSection orderId={order.id} currentInvoiceNumber={order.invoiceNumber ?? null} />
       </div>
 
+      {order.sourceType && (
+        <div className="bg-gray-900 border border-gray-800 rounded p-5 mb-6">
+          <h2 className="text-gray-400 text-xs uppercase tracking-wider mb-4">Origin</h2>
+          <div className="grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <p className="text-gray-500 mb-0.5">Source Type</p>
+              <p className="text-gray-300 capitalize">{order.sourceType}</p>
+            </div>
+            {order.utmSource && (
+              <div>
+                <p className="text-gray-500 mb-0.5">Source</p>
+                <p className="text-gray-300">{order.utmSource}</p>
+              </div>
+            )}
+            {order.utmMedium && (
+              <div>
+                <p className="text-gray-500 mb-0.5">Medium</p>
+                <p className="text-gray-300">{order.utmMedium}</p>
+              </div>
+            )}
+            {order.utmCampaign && (
+              <div className="col-span-2">
+                <p className="text-gray-500 mb-0.5">Campaign</p>
+                <p className="text-gray-300">{order.utmCampaign}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="bg-gray-900 border border-gray-800 rounded p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-gray-400 text-xs uppercase tracking-wider">Status & Dispatch</h2>

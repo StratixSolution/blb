@@ -10,7 +10,7 @@ import { generateOrderNumber } from "@/lib/orderNumber";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, customer } = body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, customer, attribution } = body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json({ error: "Missing payment fields" }, { status: 400 });
@@ -60,6 +60,10 @@ export async function POST(req: NextRequest) {
       total,
       discount: appliedDiscount,
       couponCode: couponCode ?? null,
+      sourceType: attribution?.sourceType ?? null,
+      utmSource: attribution?.utmSource ?? null,
+      utmMedium: attribution?.utmMedium ?? null,
+      utmCampaign: attribution?.utmCampaign ?? null,
     });
 
     await db.insert(orderItems).values(

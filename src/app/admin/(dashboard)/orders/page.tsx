@@ -18,6 +18,17 @@ const STATUS_TABS = [
 
 type StatusKey = (typeof STATUS_TABS)[number]["key"];
 
+function formatOrigin(sourceType: string | null, utmSource: string | null): string {
+  if (!sourceType) return "";
+  switch (sourceType) {
+    case "utm":      return utmSource ? `Source: ${utmSource}` : "Source";
+    case "organic":  return utmSource ? `Organic: ${utmSource}` : "Organic";
+    case "referral": return utmSource ? `Referral: ${utmSource}` : "Referral";
+    case "typein":   return "Direct";
+    default:         return sourceType;
+  }
+}
+
 const statusColor: Record<string, string> = {
   processing: "bg-yellow-900 text-yellow-300",
   shipped:    "bg-blue-900 text-blue-300",
@@ -168,6 +179,7 @@ export default async function OrdersPage({
                 {activeTab === "all" && (
                   <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Status</th>
                 )}
+                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Origin</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Date</th>
                 <th className="px-5 py-3" />
               </tr>
@@ -202,6 +214,13 @@ export default async function OrdersPage({
                         </Link>
                       </td>
                     )}
+                    <td className={cell}>
+                      <Link href={href} className={`${inner} text-gray-400 text-xs`}>
+                        {formatOrigin(order.sourceType ?? null, order.utmSource ?? null) || (
+                          <span className="text-gray-700">-</span>
+                        )}
+                      </Link>
+                    </td>
                     <td className={cell}>
                       <Link href={href} className={`${inner} text-gray-400 text-xs`}>{order.createdAt.slice(0, 10)}</Link>
                     </td>
