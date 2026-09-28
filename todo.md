@@ -40,6 +40,9 @@ Show a "New" label/badge on newly onboarded products on the storefront.
 ### 10% Off First Purchase Coupon
 Auto-apply or surface a first-order discount coupon (10% off) for customers who have never placed an order before.
 
+### How Do You Brew Section
+Tutorials and videos section showing brewing guides for different coffee methods.
+
 ### Merchandise Section
 Add a merchandise section to the storefront for branded items (mugs, apparel, etc.).
 
