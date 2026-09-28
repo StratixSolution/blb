@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-import { db } from "@/db/client";
-import { orders, orderItems, customers, coupons, pendingOrders } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { createOrderFromPending } from "@/lib/createOrderFromPending";
 import { esc } from "@/lib/htmlEscape";
-import { generateOrderNumber } from "@/lib/orderNumber";
 
 export async function POST(req: NextRequest) {
   console.log("=== VERIFY CALLED ===", new Date().toISOString());
@@ -30,104 +27,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
-    // Load server-side computed order snapshot
-    const [pending] = await db
-      .select()
-      .from(pendingOrders)
-      .where(eq(pendingOrders.id, razorpay_order_id))
-      .limit(1);
+    console.log("Signature verified, creating order", { razorpay_order_id });
 
-    if (!pending) {
-      return NextResponse.json({ error: "Order session expired. Please start a new checkout." }, { status: 400 });
+    const result = await createOrderFromPending(razorpay_order_id, razorpay_payment_id, customer, attribution);
+
+    if (!result.success) {
+      console.error("createOrderFromPending failed", result.error);
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    const lineItems: Array<{ productId: number; productName: string; price: number; quantity: number }> =
-      JSON.parse(pending.itemsJson);
-    const total = pending.amountPaise / 100;
-    const appliedDiscount = pending.discount;
-    const couponCode = pending.couponCode;
-
-    const orderNumber = await generateOrderNumber();
-    console.log("Inserting order", { razorpay_order_id, orderNumber, total });
-
-    await db.insert(orders).values({
-      id: razorpay_order_id,
-      paymentId: razorpay_payment_id,
-      status: "pending",
-      orderNumber,
-      customerName: customer.name,
-      customerEmail: customer.email,
-      customerPhone: customer.phone ?? "",
-      address: customer.address,
-      city: customer.city,
-      state: customer.state ?? "",
-      pincode: customer.pincode,
-      total,
-      discount: appliedDiscount,
-      couponCode: couponCode ?? null,
-      sourceType: attribution?.sourceType?.slice(0, 50) ?? null,
-      utmSource: attribution?.utmSource?.slice(0, 200) ?? null,
-      utmMedium: attribution?.utmMedium?.slice(0, 100) ?? null,
-      utmCampaign: attribution?.utmCampaign?.slice(0, 300) ?? null,
-    });
-
-    await db.insert(orderItems).values(
-      lineItems.map((i) => ({
-        orderId: razorpay_order_id,
-        productId: i.productId,
-        productName: i.productName,
-        price: i.price,
-        quantity: i.quantity,
-      }))
-    );
-
-
-    const existing = await db
-      .select()
-      .from(customers)
-      .where(eq(customers.email, customer.email))
-      .limit(1);
-
-    const now = new Date().toISOString();
-    if (existing.length > 0) {
-      await db
-        .update(customers)
-        .set({
-          orderCount: sql`${customers.orderCount} + 1`,
-          totalSpend: sql`${customers.totalSpend} + ${total}`,
-          address: customer.address,
-          city: customer.city,
-          state: customer.state ?? "",
-          pincode: customer.pincode,
-          lastOrderAt: now,
-        })
-        .where(eq(customers.email, customer.email));
-    } else {
-      await db.insert(customers).values({
-        name: customer.name,
-        email: customer.email,
-        phone: customer.phone ?? "",
-        address: customer.address,
-        city: customer.city,
-        state: customer.state ?? "",
-        pincode: customer.pincode,
-        orderCount: 1,
-        totalSpend: total,
-        lastOrderAt: now,
-      });
-    }
-
-    if (couponCode) {
-      await db
-        .update(coupons)
-        .set({ usesCount: sql`${coupons.usesCount} + 1` })
-        .where(eq(coupons.code, couponCode));
-    }
-
-    // Clean up pending order
-    await db.delete(pendingOrders).where(eq(pendingOrders.id, razorpay_order_id));
-
-    sendOrderConfirmation({ customer, lineItems, orderId: razorpay_order_id, orderNumber, paymentId: razorpay_payment_id })
+    sendOrderConfirmation({ customer, orderId: razorpay_order_id, orderNumber: result.orderNumber, paymentId: razorpay_payment_id })
       .catch((err) => console.error("Order confirmation email failed (order saved):", err));
 
     return NextResponse.json({ success: true });
@@ -139,17 +48,21 @@ export async function POST(req: NextRequest) {
 
 async function sendOrderConfirmation({
   customer,
-  lineItems,
   orderId,
   orderNumber,
   paymentId,
 }: {
   customer: { name: string; email: string; address: string; city: string; pincode: string };
-  lineItems: Array<{ productName: string; price: number; quantity: number }>;
   orderId: string;
   orderNumber: string;
   paymentId: string;
 }) {
+  // Get line items from the order
+  const { db } = await import("@/db/client");
+  const { orderItems } = await import("@/db/schema");
+  const { eq } = await import("drizzle-orm");
+  const lineItems = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT ?? 587),
@@ -164,7 +77,7 @@ async function sendOrderConfirmation({
     .join("\n");
 
   await transporter.sendMail({
-    from: `"Bean Leaf Brew" <${process.env.SMTP_FROM ?? process.env.SMTP_USER}>`,
+    from: process.env.SMTP_FROM ?? `"Bean Leaf Brew" <${process.env.SMTP_USER}>`,
     to: customer.email,
     bcc: process.env.ADMIN_EMAIL,
     subject: `Order Confirmed - Bean Leaf Brew ${orderNumber}`,

@@ -12,9 +12,11 @@ const razorpay = new Razorpay({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { items, couponCode } = body as {
+    const { items, couponCode, customer, attribution } = body as {
       items: Array<{ productId: number; quantity: number }>;
       couponCode?: string | null;
+      customer?: Record<string, string>;
+      attribution?: Record<string, string>;
     };
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -89,13 +91,15 @@ export async function POST(req: NextRequest) {
       receipt: `blb_${Date.now()}`,
     });
 
-    // Store the server-side computed order snapshot
+    // Store the server-side computed order snapshot including customer data for webhook processing
     await db.insert(pendingOrders).values({
       id: order.id as string,
       amountPaise,
       discount,
       couponCode: validatedCouponCode,
       itemsJson: JSON.stringify(lineItems),
+      customerJson: customer ? JSON.stringify(customer) : null,
+      attributionJson: attribution ? JSON.stringify(attribution) : null,
     });
 
     return NextResponse.json({ id: order.id, amount: amountPaise });

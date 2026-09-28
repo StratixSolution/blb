@@ -126,6 +126,8 @@ export const pendingOrders = sqliteTable("pending_orders", {
   discount: real("discount").notNull().default(0),
   couponCode: text("coupon_code"),
   itemsJson: text("items_json").notNull(),
+  customerJson: text("customer_json"),
+  attributionJson: text("attribution_json"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
 

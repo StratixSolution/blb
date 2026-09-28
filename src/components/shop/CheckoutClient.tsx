@@ -111,7 +111,7 @@ export function CheckoutClient() {
       const res = await fetch("/api/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: cartItems, couponCode }),
+        body: JSON.stringify({ items: cartItems, couponCode, customer: form, attribution }),
       });
       const data = await res.json();
       if (!res.ok || !data.id) throw new Error(data.error ?? "Failed to create order");
