@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { pendingOrders } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 
 // Temporary debug endpoint - DELETE after issue is resolved
 export async function GET() {
@@ -12,13 +12,22 @@ export async function GET() {
   let pendingCount = 0;
   let recentPending: { id: string; created_at: string }[] = [];
   let dbError: string | null = null;
+  let insertTestResult: string = "not_run";
 
   try {
-    const rows = await db.select().from(pendingOrders).orderBy(desc(pendingOrders.createdAt)).limit(3);
+    const rows = await db.select().from(pendingOrders).orderBy(desc(pendingOrders.createdAt)).limit(5);
     pendingCount = rows.length;
     recentPending = rows.map((r) => ({ id: r.id, created_at: r.createdAt }));
   } catch (e) {
     dbError = String(e);
+  }
+
+  // Test that we can insert a row into the settings table (non-destructive check)
+  try {
+    await db.run(sql`INSERT OR REPLACE INTO settings (key, value, label) VALUES ('debug_ping', ${new Date().toISOString()}, 'debug')`);
+    insertTestResult = "ok";
+  } catch (e) {
+    insertTestResult = String(e);
   }
 
   return NextResponse.json({
@@ -30,5 +39,6 @@ export async function GET() {
     pending_orders_count: pendingCount,
     recent_pending: recentPending,
     db_error: dbError,
+    insert_test: insertTestResult,
   });
 }
