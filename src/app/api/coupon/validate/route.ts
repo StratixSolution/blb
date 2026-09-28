@@ -26,7 +26,9 @@ export async function POST(req: NextRequest) {
     if (!coupon) return INVALID;
     if (!coupon.active) return INVALID;
     if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) return INVALID;
-    if (coupon.maxUses !== null && coupon.usesCount >= coupon.maxUses) return INVALID;
+    if (coupon.maxUses !== null && coupon.usesCount >= coupon.maxUses) {
+      return NextResponse.json({ error: "This coupon has reached its maximum usage limit" }, { status: 400 });
+    }
 
     if (cartTotal < coupon.minOrderAmount) {
       return NextResponse.json(
