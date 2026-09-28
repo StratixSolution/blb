@@ -24,12 +24,24 @@ Status check for pending orders for which payment are not done with Razorpay - s
 
 ### Customer Order Tracking Page
 Customers currently have no way to check their own order status without contacting BLB.
-Build a self-serve tracking page where customers can look up their order by order number or email.
+Build a self-serve tracking page where customers can look up their order by phone number and pincode.
 
 ### GST Invoice Generation
 Customers (especially B2B buyers) expect a downloadable GST invoice per order.
 Generate a PDF invoice with order details, GSTIN, HSN/SAC codes, and tax breakup.
 Should be accessible from the order confirmation email and optionally from the customer tracking page.
+
+### Image Swap on Hover
+Show a second product image on hover (like Blue Tokai) - swap the primary image with an alternate image when user hovers over a product card.
+
+### New Product Label
+Show a "New" label/badge on newly onboarded products on the storefront.
+
+### 10% Off First Purchase Coupon
+Auto-apply or surface a first-order discount coupon (10% off) for customers who have never placed an order before.
+
+### Merchandise Section
+Add a merchandise section to the storefront for branded items (mugs, apparel, etc.).
 
 ### Cancellation and Refund Policy
 What happens when BLB is not able to fulfill orders and manually transitions order to cancel state, do you offer refund?
