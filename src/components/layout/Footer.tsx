@@ -31,7 +31,7 @@ export function Footer() {
               We source directly from estates in Coorg and Chikmagalur.
             </p>
             <p className="text-xs text-[#F7F0E6]/40 mt-4">
-              Anywhere. Anytime.
+              Anytime. Anywhere.
             </p>
           </div>
 

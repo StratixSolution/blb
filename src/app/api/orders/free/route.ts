@@ -211,7 +211,7 @@ async function sendOrderConfirmation({
           </div>
           <p><strong>Delivery to:</strong><br/>${esc(customer.address)}, ${esc(customer.city)} ${esc(customer.pincode)}</p>
           <p style="color: #8B5E3C; font-size: 13px;">Payment ID: ${esc(paymentId)}</p>
-          <p>We'll ship your order within 1-2 business days. Anywhere. Anytime.</p>
+          <p>We'll ship your order within 1-2 business days. Anytime. Anywhere.</p>
           <p style="color: #C9953C;">— Team Bean Leaf Brew</p>
         </div>
       </div>`,

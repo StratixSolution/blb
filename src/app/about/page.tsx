@@ -47,7 +47,7 @@ export default function AboutPage() {
                 </p>
                 <p>
                   No middlemen. No stale stock. Just coffee that's honest and alive.
-                  Anywhere. Anytime.
+                  Anytime. Anywhere.
                 </p>
               </div>
             </div>
