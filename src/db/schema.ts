@@ -120,6 +120,18 @@ export const settings = sqliteTable("settings", {
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });
 
+// Single-admin credential store. There is normally exactly one row (id = 1).
+// If no row exists / password_hash is null, login falls back to the ADMIN_PASSWORD env var.
+export const adminUsers = sqliteTable("admin_users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email"),
+  passwordHash: text("password_hash"),
+  resetTokenHash: text("reset_token_hash"),
+  resetTokenExpiresAt: text("reset_token_expires_at"),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
 export const pendingOrders = sqliteTable("pending_orders", {
   id: text("id").primaryKey(),
   amountPaise: integer("amount_paise").notNull(),
@@ -132,6 +144,7 @@ export const pendingOrders = sqliteTable("pending_orders", {
 });
 
 export type Setting = typeof settings.$inferSelect;
+export type AdminUser = typeof adminUsers.$inferSelect;
 export type PendingOrder = typeof pendingOrders.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderNote = typeof orderNotes.$inferSelect;

@@ -33,7 +33,10 @@ export async function middleware(req: NextRequest) {
   const sessionCookie = req.cookies.get("admin_session")?.value;
   const validSession = await isValidSessionCookie(sessionCookie);
 
-  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login") && !validSession) {
+  const isPublicAdminPath =
+    pathname.startsWith("/admin/login") || pathname.startsWith("/admin/reset");
+
+  if (pathname.startsWith("/admin") && !isPublicAdminPath && !validSession) {
     return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 

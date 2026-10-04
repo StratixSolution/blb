@@ -124,3 +124,13 @@ CREATE TABLE IF NOT EXISTS pending_orders (
   items_json TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS admin_users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT,
+  password_hash TEXT,
+  reset_token_hash TEXT,
+  reset_token_expires_at TEXT,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

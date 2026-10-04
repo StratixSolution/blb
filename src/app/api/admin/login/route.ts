@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { db } from "@/db/client";
+import { adminUsers } from "@/db/schema";
+import { verifyPassword } from "@/lib/adminPassword";
 
+// Session cookies are signed with ADMIN_PASSWORD to stay backward compatible with
+// existing sessions and the middleware. (A future improvement is a dedicated
+// SESSION_SECRET; keeping ADMIN_PASSWORD here avoids invalidating live sessions.)
 function signToken(token: string): string {
   const secret = process.env.ADMIN_PASSWORD!;
   return crypto.createHmac("sha256", secret).update(token).digest("hex");
@@ -35,12 +41,37 @@ export async function POST(req: NextRequest) {
 
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminPassword) {
+    // ADMIN_PASSWORD is still required because it signs session cookies.
     console.error("ADMIN_PASSWORD env var is not set");
     return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
   }
 
   const { password } = await req.json();
-  if (password !== adminPassword) {
+  if (typeof password !== "string" || password.length === 0) {
+    return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+  }
+
+  // Prefer the DB-stored password hash (set via "change password" / reset flow).
+  // Fall back to the ADMIN_PASSWORD env var when no DB password has been set yet,
+  // preserving the original login behaviour.
+  let authenticated = false;
+  try {
+    const [admin] = await db.select().from(adminUsers).limit(1);
+    if (admin?.passwordHash) {
+      authenticated = verifyPassword(password, admin.passwordHash);
+    }
+  } catch (err) {
+    console.error("admin_users lookup failed, falling back to env password", err);
+  }
+
+  if (!authenticated) {
+    // Env fallback (constant-time compare).
+    const a = Buffer.from(password);
+    const b = Buffer.from(adminPassword);
+    authenticated = a.length === b.length && crypto.timingSafeEqual(a, b);
+  }
+
+  if (!authenticated) {
     return NextResponse.json({ error: "Invalid password" }, { status: 401 });
   }
 
