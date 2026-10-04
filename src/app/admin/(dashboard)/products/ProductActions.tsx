@@ -77,22 +77,32 @@ function splitComma(s: string) {
 function ImageUploader({ images, onChange }: { images: string[]; onChange: (imgs: string[]) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
+    setUploadError("");
     const newUrls: string[] = [];
     for (const file of Array.from(files)) {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-      if (res.ok) {
-        const data = await res.json();
-        newUrls.push(data.url);
+      try {
+        const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+        if (res.ok) {
+          const data = await res.json();
+          newUrls.push(data.url);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          setUploadError(data.error ?? "Upload failed.");
+        }
+      } catch {
+        setUploadError("Upload failed. Check your connection and try again.");
       }
     }
-    onChange([...images, ...newUrls]);
+    if (newUrls.length) onChange([...images, ...newUrls]);
     setUploading(false);
+    if (inputRef.current) inputRef.current.value = "";
   }
 
   function remove(idx: number) {
@@ -143,6 +153,7 @@ function ImageUploader({ images, onChange }: { images: string[]; onChange: (imgs
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />
+      {uploadError && <p className="text-red-400 text-xs mb-1">{uploadError}</p>}
       <p className="text-gray-500 text-xs">First image is the main product image. Drag order with ← → arrows.</p>
     </div>
   );

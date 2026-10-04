@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { writeFile } from "fs/promises";
-import path from "path";
+import { put } from "@vercel/blob";
 import crypto from "crypto";
 
 function detectImageType(buf: Buffer): { ext: string; mime: string } | null {
@@ -15,6 +14,13 @@ function detectImageType(buf: Buffer): { ext: string; mime: string } | null {
 export async function POST(req: NextRequest) {
   const unauth = await requireAdmin();
   if (unauth) return unauth;
+
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json(
+      { error: "Image storage is not configured. Set BLOB_READ_WRITE_TOKEN." },
+      { status: 500 },
+    );
+  }
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
@@ -30,10 +36,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid image file. Use JPEG, PNG, WebP, or GIF." }, { status: 400 });
   }
 
-  const filename = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}.${detected.ext}`;
-  const dest = path.join(process.cwd(), "public", "images", "products", filename);
+  const filename = `products/${Date.now()}-${crypto.randomBytes(8).toString("hex")}.${detected.ext}`;
 
-  await writeFile(dest, buffer);
-
-  return NextResponse.json({ url: `/images/products/${filename}` });
+  try {
+    const blob = await put(filename, buffer, {
+      access: "public",
+      contentType: detected.mime,
+    });
+    return NextResponse.json({ url: blob.url });
+  } catch (err) {
+    console.error("Blob upload failed:", err);
+    return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 500 });
+  }
 }
