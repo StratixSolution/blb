@@ -4,6 +4,10 @@ import { db } from "@/db/client";
 import { orders } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 
+// Admin dashboard must always reflect the latest DB state (orders, coupons, etc.).
+// Without this, these pages are prerendered/cached and show stale data after edits.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)` })
