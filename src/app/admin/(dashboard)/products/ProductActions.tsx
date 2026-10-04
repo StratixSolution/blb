@@ -21,6 +21,7 @@ interface DbProduct {
   blend: string | null;
   inStock: number | boolean;
   featured: number | boolean;
+  visible: number | boolean;
   ean: string | null;
 }
 
@@ -40,13 +41,14 @@ interface ProductFormData {
   tags: string;
   inStock: boolean;
   featured: boolean;
+  visible: boolean;
   images: string[];
 }
 
 const EMPTY_FORM: ProductFormData = {
   name: "", slug: "", category: "ground-coffee", price: "", regularPrice: "",
   shortDescription: "", description: "", weight: "", roast: "", blend: "", ean: "",
-  notes: "", tags: "", inStock: true, featured: false, images: [],
+  notes: "", tags: "", inStock: true, featured: false, visible: true, images: [],
 };
 
 function toForm(p: DbProduct): ProductFormData {
@@ -57,7 +59,7 @@ function toForm(p: DbProduct): ProductFormData {
     weight: p.weight ?? "", roast: p.roast ?? "", blend: p.blend ?? "", ean: p.ean ?? "",
     notes: (JSON.parse(p.notes || "[]") as string[]).join(", "),
     tags: (JSON.parse(p.tags || "[]") as string[]).join(", "),
-    inStock: Boolean(p.inStock), featured: Boolean(p.featured),
+    inStock: Boolean(p.inStock), featured: Boolean(p.featured), visible: Boolean(p.visible),
     images: JSON.parse(p.images || "[]") as string[],
   };
 }
@@ -287,7 +289,14 @@ function ProductModal({
               <input type="checkbox" checked={form.featured} onChange={(e) => set("featured", e.target.checked)} className="w-4 h-4 rounded accent-amber-500" />
               <span className="text-gray-300 text-sm">Featured on Homepage</span>
             </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={form.visible} onChange={(e) => set("visible", e.target.checked)} className="w-4 h-4 rounded accent-amber-500" />
+              <span className="text-gray-300 text-sm">Show on Site</span>
+            </label>
           </div>
+          {!form.visible && (
+            <p className="text-amber-400/80 text-xs -mt-2">This product is hidden and will not be visible on the site.</p>
+          )}
 
           <div>
             <label className={labelCls}>Product Images</label>
@@ -357,6 +366,30 @@ export function ToggleStockButton({ id, inStock }: { id: number; inStock: boolea
   return (
     <button onClick={toggle} disabled={loading} className={`text-xs px-2 py-0.5 rounded font-medium transition-opacity disabled:opacity-50 ${inStock ? "bg-green-900 text-green-300 hover:bg-green-800" : "bg-red-900 text-red-300 hover:bg-red-800"}`}>
       {loading ? "..." : inStock ? "In Stock" : "Out of Stock"}
+    </button>
+  );
+}
+
+// ── Toggle Visibility ─────────────────────────────────────────────────────────
+
+export function ToggleVisibilityButton({ id, visible }: { id: number; visible: boolean }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function toggle() {
+    setLoading(true);
+    await fetch(`/api/admin/products/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visible: !visible }),
+    });
+    router.refresh();
+    setLoading(false);
+  }
+
+  return (
+    <button onClick={toggle} disabled={loading} className={`text-xs px-2 py-0.5 rounded font-medium transition-opacity disabled:opacity-50 ${visible ? "bg-sky-900 text-sky-300 hover:bg-sky-800" : "bg-gray-700 text-gray-400 hover:bg-gray-600"}`}>
+      {loading ? "..." : visible ? "Shown" : "Hidden"}
     </button>
   );
 }

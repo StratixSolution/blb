@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { name, slug, category, price, regularPrice, shortDescription, description,
-          weight, roast, blend, ean, notes, tags, images, inStock, featured } = body;
+          weight, roast, blend, ean, notes, tags, images, inStock, featured, visible } = body;
 
   if (!name || !slug || !category || !price) {
     return NextResponse.json({ error: "name, slug, category, price are required" }, { status: 400 });
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     images: JSON.stringify(Array.isArray(images) ? images : []),
     inStock: Boolean(inStock),
     featured: Boolean(featured),
+    visible: visible === undefined ? true : Boolean(visible),
     ean: ean ?? null,
   }).returning();
 

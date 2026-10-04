@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS products (
   roast TEXT,
   blend TEXT,
   featured INTEGER NOT NULL DEFAULT 0,
+  visible INTEGER NOT NULL DEFAULT 1,
   ean TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))

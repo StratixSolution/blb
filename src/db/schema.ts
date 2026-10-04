@@ -95,6 +95,7 @@ export const products = sqliteTable("products", {
   roast: text("roast"),
   blend: text("blend"),
   featured: integer("featured", { mode: "boolean" }).notNull().default(false),
+  visible: integer("visible", { mode: "boolean" }).notNull().default(true),
   ean: text("ean"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),

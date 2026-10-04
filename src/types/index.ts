@@ -15,6 +15,7 @@ export interface Product {
   images: string[];
   tags: string[];
   inStock: boolean;
+  visible: boolean;
   weight?: string;
   notes?: string[];
   roast?: string;

@@ -3,7 +3,7 @@ import { products } from "@/db/schema";
 import { and, or, like, eq, sql } from "drizzle-orm";
 import Image from "next/image";
 import Link from "next/link";
-import { AddProductButton, EditProductButton, DeleteProductButton, ToggleStockButton } from "./ProductActions";
+import { AddProductButton, EditProductButton, DeleteProductButton, ToggleStockButton, ToggleVisibilityButton } from "./ProductActions";
 import { SearchInput } from "../_components/SearchInput";
 
 const CATEGORY_TABS = [
@@ -159,6 +159,7 @@ export default async function ProductsPage({
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Price</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Weight</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Stock</th>
+                <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Visibility</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Featured</th>
                 <th className="text-left text-gray-400 text-xs uppercase tracking-wider px-5 py-3">Actions</th>
               </tr>
@@ -197,6 +198,9 @@ export default async function ProductsPage({
                     <td className="px-5 py-3 text-gray-400">{product.weight ?? "-"}</td>
                     <td className="px-5 py-3">
                       <ToggleStockButton id={product.id} inStock={Boolean(product.inStock)} />
+                    </td>
+                    <td className="px-5 py-3">
+                      <ToggleVisibilityButton id={product.id} visible={Boolean(product.visible)} />
                     </td>
                     <td className="px-5 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded ${Boolean(product.featured) ? "bg-amber-900 text-amber-300" : "text-gray-600"}`}>
