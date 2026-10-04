@@ -80,6 +80,12 @@ export function Footer() {
             Whitefield, Bengaluru 560066 · +91 8123273344
           </p>
         </div>
+
+        <div className="mt-6 text-center">
+          <p className="text-xs text-[#F7F0E6]/30">
+            Made with <span className="text-[#C9953C]">❤</span> by Stratix Solutions
+          </p>
+        </div>
       </div>
     </footer>
   );
