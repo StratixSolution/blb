@@ -13,6 +13,8 @@ const EDITABLE_KEYS = [
   "invoice_prefix",
   "invoice_counter",
   "igst_rate",
+  "cgst_rate",
+  "sgst_rate",
   "hsn_code",
   "seller_name",
   "seller_address",
@@ -25,15 +27,35 @@ const EDITABLE_KEYS = [
   "bank_details",
 ];
 
+// Fallback labels/defaults for keys that may not yet exist as rows in the DB.
+const DEFAULT_LABELS: Record<string, string> = {
+  igst_rate: "IGST Rate (%)",
+  cgst_rate: "CGST Rate (%)",
+  sgst_rate: "SGST Rate (%)",
+};
+const DEFAULT_VALUES: Record<string, string> = {
+  cgst_rate: "2.5",
+  sgst_rate: "2.5",
+};
+
 export function SettingsClient({ rows }: { rows: Setting[] }) {
   const router = useRouter();
-  const [values, setValues] = useState<Record<string, string>>(
-    Object.fromEntries(rows.map((r) => [r.key, r.value]))
-  );
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    const base = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+    // Ensure the tax-rate keys always have a value to edit, even if the row
+    // hasn't been created in the DB yet. Saving will upsert them.
+    for (const [key, def] of Object.entries(DEFAULT_VALUES)) {
+      if (base[key] === undefined) base[key] = def;
+    }
+    return base;
+  });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const labelMap = Object.fromEntries(rows.map((r) => [r.key, r.label]));
+  const labelMap: Record<string, string> = {
+    ...DEFAULT_LABELS,
+    ...Object.fromEntries(rows.map((r) => [r.key, r.label])),
+  };
 
   async function save() {
     setSaving(true);

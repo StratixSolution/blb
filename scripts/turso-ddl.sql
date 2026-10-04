@@ -134,3 +134,10 @@ CREATE TABLE IF NOT EXISTS admin_users (
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Tax rate settings. IGST applies to inter-state orders; CGST + SGST apply to
+-- intra-state orders (customer in the seller's home state, Karnataka).
+-- These are idempotent: existing rows (and their edited values) are preserved.
+INSERT OR IGNORE INTO settings (key, value, label) VALUES ('igst_rate', '5', 'IGST Rate (%)');
+INSERT OR IGNORE INTO settings (key, value, label) VALUES ('cgst_rate', '2.5', 'CGST Rate (%)');
+INSERT OR IGNORE INTO settings (key, value, label) VALUES ('sgst_rate', '2.5', 'SGST Rate (%)');

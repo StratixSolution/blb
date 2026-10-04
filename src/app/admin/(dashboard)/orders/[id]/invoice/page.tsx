@@ -3,6 +3,7 @@ import { orders, orderItems, products, settings } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { amountInWords } from "@/lib/amountInWords";
+import { computeInvoiceTax } from "@/lib/invoiceTax";
 import { PrintButton } from "./PrintButton";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -52,31 +53,25 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
     (await db.select().from(settings)).map((r) => [r.key, r.value])
   );
 
-  const igstRate = parseFloat(allSettings.igst_rate ?? "5");
+  const tax = computeInvoiceTax(
+    items.map((item, i) => {
+      const product = productMap[item.productId];
+      return {
+        idx: i + 1,
+        name: item.productName,
+        weight: product?.weight ?? "",
+        ean: product?.ean ?? "",
+        qty: item.quantity,
+        mrp: item.price,
+      };
+    }),
+    allSettings,
+    order.state
+  );
 
-  const lineItems = items.map((item, i) => {
-    const product = productMap[item.productId];
-    const mrp = item.price;
-    const qty = item.quantity;
-    const basicRate = mrp / (1 + igstRate / 100);
-    const igstPerUnit = mrp - basicRate;
-    const igstTotal = igstPerUnit * qty;
-    const basicTotal = basicRate * qty;
-    return {
-      idx: i + 1,
-      name: item.productName,
-      weight: product?.weight ?? "",
-      ean: product?.ean ?? "",
-      qty,
-      mrp,
-      basicRate,
-      igstTotal,
-      basicTotal,
-    };
-  });
-
-  const totalBasic = lineItems.reduce((s, l) => s + l.basicTotal, 0);
-  const totalIgst = lineItems.reduce((s, l) => s + l.igstTotal, 0);
+  const lineItems = tax.lines;
+  const { intraState, totalBasic, totalSgst, totalCgst, totalIgst } = tax;
+  const totalGst = tax.totalTax;
   const totalAmount = order.total;
 
   const fmt = (n: number) => n.toFixed(2);
@@ -306,11 +301,11 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 </td>
                 <td className="text-center">{item.qty}</td>
                 <td className="text-right">{fmt(item.mrp)}</td>
-                <td className="text-center">0</td>
-                <td className="text-center">0</td>
-                <td className="text-center">{igstRate}</td>
-                <td className="text-right">0.00</td>
-                <td className="text-right">0.00</td>
+                <td className="text-center">{item.sgstRate}</td>
+                <td className="text-center">{item.cgstRate}</td>
+                <td className="text-center">{item.igstRate}</td>
+                <td className="text-right">{fmt(item.sgstTotal)}</td>
+                <td className="text-right">{fmt(item.cgstTotal)}</td>
                 <td className="text-right">{fmt(item.igstTotal)}</td>
                 <td className="text-right">{fmt(item.basicRate)}</td>
                 <td className="text-right">{fmt(item.basicTotal)}</td>
@@ -324,8 +319,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               <td></td>
               <td></td>
               <td></td>
-              <td className="text-right">0</td>
-              <td className="text-right">0</td>
+              <td className="text-right">{fmt(totalSgst)}</td>
+              <td className="text-right">{fmt(totalCgst)}</td>
               <td className="text-right">{fmt(totalIgst)}</td>
               <td></td>
               <td className="text-right">{fmt(totalBasic)}</td>
@@ -336,11 +331,34 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               </td>
               <td className="text-right">{fmt(totalBasic)}</td>
             </tr>
+            {intraState ? (
+              <>
+                <tr className="total-row">
+                  <td colSpan={13} className="text-right">
+                    Total SGST Rs.
+                  </td>
+                  <td className="text-right">{fmt(totalSgst)}</td>
+                </tr>
+                <tr className="total-row">
+                  <td colSpan={13} className="text-right">
+                    Total CGST Rs.
+                  </td>
+                  <td className="text-right">{fmt(totalCgst)}</td>
+                </tr>
+              </>
+            ) : (
+              <tr className="total-row">
+                <td colSpan={13} className="text-right">
+                  Total IGST Rs.
+                </td>
+                <td className="text-right">{fmt(totalIgst)}</td>
+              </tr>
+            )}
             <tr className="total-row">
               <td colSpan={13} className="text-right">
                 Total GST Rs.
               </td>
-              <td className="text-right">{fmt(totalIgst)}</td>
+              <td className="text-right">{fmt(totalGst)}</td>
             </tr>
             {order.discount > 0 && (
               <tr className="total-row">

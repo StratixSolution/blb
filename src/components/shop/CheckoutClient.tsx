@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
 import { getStoredAttribution } from "@/lib/utmCapture";
+import { INDIA_STATES, getCitiesForState, OTHER_CITY } from "@/lib/indiaLocations";
 
 interface FormData {
   name: string;
@@ -33,6 +34,10 @@ export function CheckoutClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Whether the "Other" city option is active, so a free-text input is shown
+  // for cities not present in the dropdown list.
+  const [customCity, setCustomCity] = useState(false);
+
   const [couponInput, setCouponInput] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
@@ -53,8 +58,29 @@ export function CheckoutClient() {
   }
 
   function set(field: keyof FormData, value: string) {
-    setForm((f) => ({ ...f, [field]: value }));
+    setForm((f) => {
+      // When state changes, reset the city so it stays consistent with the new state.
+      if (field === "state") {
+        return { ...f, state: value, city: "" };
+      }
+      return { ...f, [field]: value };
+    });
+    // Changing the state clears any custom-city mode.
+    if (field === "state") setCustomCity(false);
   }
+
+  function selectCity(value: string) {
+    if (value === OTHER_CITY) {
+      // Enter free-text mode and clear any previously selected city.
+      setCustomCity(true);
+      setForm((f) => ({ ...f, city: "" }));
+    } else {
+      setCustomCity(false);
+      setForm((f) => ({ ...f, city: value }));
+    }
+  }
+
+  const cityOptions = getCitiesForState(form.state);
 
   async function applyCoupon() {
     if (!couponInput.trim()) return;
@@ -184,9 +210,6 @@ export function CheckoutClient() {
           { label: "Email Address", field: "email" as const, type: "email", required: true },
           { label: "Phone Number", field: "phone" as const, type: "tel", required: true },
           { label: "Delivery Address", field: "address" as const, type: "text", required: true },
-          { label: "City", field: "city" as const, type: "text", required: true },
-          { label: "State", field: "state" as const, type: "text", required: true },
-          { label: "Pincode", field: "pincode" as const, type: "text", required: true },
         ].map(({ label, field, type, required }) => (
           <div key={field}>
             <label className="block text-xs uppercase tracking-widest text-[#8B5E3C] mb-1.5">{label}</label>
@@ -199,6 +222,59 @@ export function CheckoutClient() {
             />
           </div>
         ))}
+
+        <div>
+          <label className="block text-xs uppercase tracking-widest text-[#8B5E3C] mb-1.5">State</label>
+          <select
+            value={form.state}
+            onChange={(e) => set("state", e.target.value)}
+            required
+            className="w-full border border-[#D4C4B0] bg-[#FAFAF8] text-[#1A0E08] text-sm px-4 py-3 focus:outline-none focus:border-[#8B5E3C] transition-colors"
+          >
+            <option value="">Select State</option>
+            {INDIA_STATES.map((st) => (
+              <option key={st} value={st}>{st}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs uppercase tracking-widest text-[#8B5E3C] mb-1.5">City</label>
+          <select
+            value={customCity ? OTHER_CITY : form.city}
+            onChange={(e) => selectCity(e.target.value)}
+            required={!customCity}
+            disabled={!form.state}
+            className="w-full border border-[#D4C4B0] bg-[#FAFAF8] text-[#1A0E08] text-sm px-4 py-3 focus:outline-none focus:border-[#8B5E3C] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <option value="">{form.state ? "Select City" : "Select a state first"}</option>
+            {cityOptions.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+            {form.state && <option value={OTHER_CITY}>Other (enter manually)</option>}
+          </select>
+          {customCity && (
+            <input
+              type="text"
+              value={form.city}
+              onChange={(e) => set("city", e.target.value)}
+              required
+              placeholder="Enter your city"
+              className="w-full mt-2 border border-[#D4C4B0] bg-[#FAFAF8] text-[#1A0E08] text-sm px-4 py-3 focus:outline-none focus:border-[#8B5E3C] transition-colors"
+            />
+          )}
+        </div>
+
+        <div>
+          <label className="block text-xs uppercase tracking-widest text-[#8B5E3C] mb-1.5">Pincode</label>
+          <input
+            type="text"
+            value={form.pincode}
+            onChange={(e) => set("pincode", e.target.value)}
+            required
+            className="w-full border border-[#D4C4B0] bg-[#FAFAF8] text-[#1A0E08] text-sm px-4 py-3 focus:outline-none focus:border-[#8B5E3C] transition-colors"
+          />
+        </div>
 
         {error && <p className="text-red-600 text-sm">{error}</p>}
 

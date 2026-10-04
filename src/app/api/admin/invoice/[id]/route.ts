@@ -5,6 +5,7 @@ import { eq, inArray } from "drizzle-orm";
 import { requireAdmin } from "@/lib/adminAuth";
 import { assignInvoiceNumber } from "@/lib/invoiceNumber";
 import { amountInWords } from "@/lib/amountInWords";
+import { computeInvoiceTax } from "@/lib/invoiceTax";
 
 export async function GET(
   req: NextRequest,
@@ -39,31 +40,25 @@ export async function GET(
     (await db.select().from(settings)).map((r) => [r.key, r.value])
   );
 
-  const igstRate = parseFloat(allSettings.igst_rate ?? "5");
+  const tax = computeInvoiceTax(
+    items.map((item, i) => {
+      const product = productMap[item.productId];
+      return {
+        idx: i + 1,
+        name: item.productName,
+        weight: product?.weight ?? "",
+        ean: product?.ean ?? "",
+        qty: item.quantity,
+        mrp: item.price,
+      };
+    }),
+    allSettings,
+    order.state
+  );
 
-  const lineItems = items.map((item, i) => {
-    const product = productMap[item.productId];
-    const mrp = item.price;
-    const qty = item.quantity;
-    const basicRate = mrp / (1 + igstRate / 100);
-    const igstPerUnit = mrp - basicRate;
-    const igstTotal = igstPerUnit * qty;
-    const basicTotal = basicRate * qty;
-    return {
-      idx: i + 1,
-      name: item.productName,
-      weight: product?.weight ?? "",
-      ean: product?.ean ?? "",
-      qty,
-      mrp,
-      basicRate,
-      igstTotal,
-      basicTotal,
-    };
-  });
-
-  const totalBasic = lineItems.reduce((s, l) => s + l.basicTotal, 0);
-  const totalIgst = lineItems.reduce((s, l) => s + l.igstTotal, 0);
+  const lineItems = tax.lines;
+  const { intraState, totalBasic, totalSgst, totalCgst, totalIgst } = tax;
+  const totalGst = tax.totalTax;
   const totalAmount = order.total;
 
   const fmt = (n: number) => n.toFixed(2);
@@ -89,11 +84,11 @@ export async function GET(
       <td style="text-align:center;font-family:monospace;font-size:6.5pt">${e(item.ean) || "-"}</td>
       <td style="text-align:center">${item.qty}</td>
       <td style="text-align:right">${fmt(item.mrp)}</td>
-      <td style="text-align:center">0</td>
-      <td style="text-align:center">0</td>
-      <td style="text-align:center">${igstRate}</td>
-      <td style="text-align:right">0.00</td>
-      <td style="text-align:right">0.00</td>
+      <td style="text-align:center">${item.sgstRate}</td>
+      <td style="text-align:center">${item.cgstRate}</td>
+      <td style="text-align:center">${item.igstRate}</td>
+      <td style="text-align:right">${fmt(item.sgstTotal)}</td>
+      <td style="text-align:right">${fmt(item.cgstTotal)}</td>
       <td style="text-align:right">${fmt(item.igstTotal)}</td>
       <td style="text-align:right">${fmt(item.basicRate)}</td>
       <td style="text-align:right">${fmt(item.basicTotal)}</td>
@@ -223,8 +218,8 @@ export async function GET(
         <tr class="total-row">
           <td colspan="5" style="text-align:center;font-weight:normal;font-size:7pt">Total</td>
           <td></td><td></td><td></td><td></td>
-          <td style="text-align:right">0</td>
-          <td style="text-align:right">0</td>
+          <td style="text-align:right">${fmt(totalSgst)}</td>
+          <td style="text-align:right">${fmt(totalCgst)}</td>
           <td style="text-align:right">${fmt(totalIgst)}</td>
           <td></td>
           <td style="text-align:right">${fmt(totalBasic)}</td>
@@ -233,9 +228,24 @@ export async function GET(
           <td colspan="13" style="text-align:right">Total Basic Rate Rs.</td>
           <td style="text-align:right">${fmt(totalBasic)}</td>
         </tr>
+        ${
+          intraState
+            ? `<tr class="total-row">
+          <td colspan="13" style="text-align:right">Total SGST Rs.</td>
+          <td style="text-align:right">${fmt(totalSgst)}</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="13" style="text-align:right">Total CGST Rs.</td>
+          <td style="text-align:right">${fmt(totalCgst)}</td>
+        </tr>`
+            : `<tr class="total-row">
+          <td colspan="13" style="text-align:right">Total IGST Rs.</td>
+          <td style="text-align:right">${fmt(totalIgst)}</td>
+        </tr>`
+        }
         <tr class="total-row">
           <td colspan="13" style="text-align:right">Total GST Rs.</td>
-          <td style="text-align:right">${fmt(totalIgst)}</td>
+          <td style="text-align:right">${fmt(totalGst)}</td>
         </tr>
         ${discountRow}
         <tr class="grand-total">
