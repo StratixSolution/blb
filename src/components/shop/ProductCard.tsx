@@ -15,9 +15,9 @@ export function ProductCard({ product }: Props) {
   const { addItem } = useCartStore();
 
   return (
-    <div className="group bg-[#FAFAF8] border border-[#D4C4B0] overflow-hidden hover:shadow-md transition-shadow">
-      <Link href={`/shop/${product.slug}`} className="block">
-        <div className="relative h-56 bg-[#EAD9C8] overflow-hidden">
+    <div className="group flex flex-col w-full bg-[#FAFAF8] border border-[#D4C4B0] overflow-hidden hover:shadow-md transition-shadow">
+      <Link href={`/shop/${product.slug}`} className="flex flex-col flex-1">
+        <div className="relative h-56 bg-[#EAD9C8] overflow-hidden flex-shrink-0">
           <Image
             src={product.images[0]}
             alt={product.name}
@@ -31,7 +31,7 @@ export function ProductCard({ product }: Props) {
             </span>
           )}
         </div>
-        <div className="p-5">
+        <div className="p-5 flex-1">
           <p className="text-[9px] uppercase tracking-widest text-[#8B5E3C] mb-1">
             {product.category === "ground-coffee"
               ? "Ground Coffee"

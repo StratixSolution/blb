@@ -35,7 +35,7 @@ export function PremixStrip({ products }: Props) {
                     src={product.images[0]}
                     alt={product.name}
                     fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="object-contain p-3 group-hover:scale-105 transition-transform duration-500"
                     sizes="176px"
                   />
                   {product.regularPrice && (

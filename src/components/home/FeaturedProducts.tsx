@@ -34,7 +34,7 @@ export function FeaturedProducts({ products }: Props) {
                       src={product.images[0]}
                       alt={product.name}
                       fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="object-contain p-4 group-hover:scale-105 transition-transform duration-500"
                       sizes="(max-width: 768px) 100vw, 33vw"
                     />
                   </div>
