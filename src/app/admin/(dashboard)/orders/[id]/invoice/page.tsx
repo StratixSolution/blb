@@ -56,15 +56,26 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const tax = computeInvoiceTax(
     items.map((item, i) => {
       const product = productMap[item.productId];
+      // Use the customer-selected weight when present. Only fall back to the
+      // product's static weight when the product has no multi-weight options,
+      // otherwise the default could misrepresent what was actually bought.
+      const hasWeightOptions = (() => {
+        try {
+          const parsed = JSON.parse(product?.weightOptions ?? "[]");
+          return Array.isArray(parsed) && parsed.length > 0;
+        } catch {
+          return false;
+        }
+      })();
+      const weight = item.selectedWeight ?? (hasWeightOptions ? "" : product?.weight ?? "");
       return {
         idx: i + 1,
         name: item.productName,
-        // Prefer the customer-selected weight (ground coffee); fall back to the
-        // product's static weight.
-        weight: item.selectedWeight ?? product?.weight ?? "",
+        weight,
         ean: product?.ean ?? "",
         qty: item.quantity,
         mrp: item.price,
+        brewingEquipment: item.brewingEquipment ?? undefined,
       };
     }),
     allSettings,
@@ -296,8 +307,15 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             {lineItems.map((item) => (
               <tr key={item.idx}>
                 <td className="text-center">{item.idx}</td>
-                <td>{item.name}</td>
-                <td className="text-center">{item.weight}</td>
+                <td>
+                  {item.name}
+                  {item.brewingEquipment && (
+                    <span style={{ display: "block", fontSize: "6.5pt", color: "#555" }}>
+                      Brewing: {item.brewingEquipment}
+                    </span>
+                  )}
+                </td>
+                <td className="text-center">{item.weight || "-"}</td>
                 <td className="text-center mono" style={{ fontSize: "6.5pt" }}>
                   {item.ean || "-"}
                 </td>

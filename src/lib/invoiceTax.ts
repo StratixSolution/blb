@@ -7,6 +7,8 @@ export interface TaxLineInput {
   ean: string;
   qty: number;
   mrp: number;
+  // Customer-selected brewing equipment (ground coffee); passed through only.
+  brewingEquipment?: string;
 }
 
 export interface TaxLine extends TaxLineInput {
