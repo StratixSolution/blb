@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useCartStore } from "@/store/cart";
+import { useCartStore, lineKey, unitPrice } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
 import { getStoredAttribution } from "@/lib/utmCapture";
 import { INDIA_STATES, getCitiesForState, OTHER_CITY } from "@/lib/indiaLocations";
@@ -106,7 +106,12 @@ export function CheckoutClient() {
     setError("");
     setLoading(true);
 
-    const cartItems = items.map((i) => ({ productId: i.product.id, quantity: i.quantity }));
+    const cartItems = items.map((i) => ({
+      productId: i.product.id,
+      quantity: i.quantity,
+      selectedWeight: i.selectedWeight ?? null,
+      selectedEquipment: i.selectedEquipment ?? null,
+    }));
     const couponCode = appliedCoupon?.code ?? null;
 
     const attribution = getStoredAttribution();
@@ -290,18 +295,23 @@ export function CheckoutClient() {
       <aside className="lg:col-span-2 order-1 lg:order-2">
         <h2 className="font-serif text-2xl text-[#1A0E08] mb-6">Order Summary</h2>
         <div className="bg-[#FAFAF8] border border-[#D4C4B0] p-6 space-y-4">
-          {items.map(({ product, quantity }) => (
-            <div key={product.id} className="flex gap-3">
-              <div className="w-12 h-12 bg-[#EAD9C8] overflow-hidden flex-shrink-0">
-                <Image src={product.images[0]} alt={product.name} width={48} height={48} className="w-full h-full object-cover" />
+          {items.map((item) => {
+            const { product, quantity, selectedWeight, selectedEquipment } = item;
+            return (
+              <div key={lineKey(item)} className="flex gap-3">
+                <div className="w-12 h-12 bg-[#EAD9C8] overflow-hidden flex-shrink-0">
+                  <Image src={product.images[0]} alt={product.name} width={48} height={48} className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-[#1A0E08]">{product.name}</p>
+                  {selectedWeight && <p className="text-xs text-[#8B5E3C]">{selectedWeight}</p>}
+                  {selectedEquipment && <p className="text-xs text-[#8B5E3C]">Brewing: {selectedEquipment}</p>}
+                  <p className="text-xs text-[#8B5E3C]">Qty: {quantity}</p>
+                </div>
+                <p className="text-xs font-medium text-[#1A0E08]">{formatPrice(unitPrice(item) * quantity)}</p>
               </div>
-              <div className="flex-1">
-                <p className="text-xs font-medium text-[#1A0E08]">{product.name}</p>
-                <p className="text-xs text-[#8B5E3C]">Qty: {quantity}</p>
-              </div>
-              <p className="text-xs font-medium text-[#1A0E08]">{formatPrice(product.price * quantity)}</p>
-            </div>
-          ))}
+            );
+          })}
           <div className="border-t border-[#D4C4B0] pt-4 space-y-2">
             {!appliedCoupon ? (
               <div>

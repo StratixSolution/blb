@@ -5,13 +5,14 @@ import { orders, orderItems, customers, coupons, products } from "@/db/schema";
 import { eq, sql, inArray } from "drizzle-orm";
 import { esc } from "@/lib/htmlEscape";
 import { generateOrderNumber } from "@/lib/orderNumber";
+import { resolveLineOptions } from "@/lib/productOptions";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { customer, items, couponCode, attribution } = body as {
       customer: { name: string; email: string; phone?: string; address: string; city: string; state?: string; pincode: string };
-      items: Array<{ productId: number; quantity: number }>;
+      items: Array<{ productId: number; quantity: number; selectedWeight?: string | null; selectedEquipment?: string | null }>;
       couponCode?: string | null;
       attribution?: { sourceType: string; utmSource: string | null; utmMedium: string | null; utmCampaign: string | null } | null;
     };
@@ -26,14 +27,35 @@ export async function POST(req: NextRequest) {
     const productMap = new Map(dbProducts.map((p) => [p.id, p]));
 
     let subtotal = 0;
-    const lineItems: Array<{ productId: number; productName: string; price: number; quantity: number }> = [];
+    const lineItems: Array<{
+      productId: number;
+      productName: string;
+      price: number;
+      quantity: number;
+      selectedWeight: string | null;
+      brewingEquipment: string | null;
+    }> = [];
 
     for (const item of items) {
       const product = productMap.get(item.productId);
       if (!product) return NextResponse.json({ error: `Product not found: ${item.productId}` }, { status: 400 });
+      const resolved = resolveLineOptions(product, {
+        selectedWeight: item.selectedWeight,
+        selectedEquipment: item.selectedEquipment,
+      });
+      if ("error" in resolved) {
+        return NextResponse.json({ error: resolved.error }, { status: 400 });
+      }
       const qty = Math.max(1, Math.floor(item.quantity));
-      subtotal += product.price * qty;
-      lineItems.push({ productId: product.id, productName: product.name, price: product.price, quantity: qty });
+      subtotal += resolved.unitPrice * qty;
+      lineItems.push({
+        productId: product.id,
+        productName: product.name,
+        price: resolved.unitPrice,
+        quantity: qty,
+        selectedWeight: resolved.selectedWeight,
+        brewingEquipment: resolved.brewingEquipment,
+      });
     }
 
     // Validate coupon server-side
@@ -105,6 +127,8 @@ export async function POST(req: NextRequest) {
         productName: i.productName,
         price: i.price,
         quantity: i.quantity,
+        selectedWeight: i.selectedWeight,
+        brewingEquipment: i.brewingEquipment,
       }))
     );
 
@@ -169,7 +193,7 @@ async function sendOrderConfirmation({
   discount,
 }: {
   customer: { name: string; email: string; address: string; city: string; pincode: string };
-  lineItems: Array<{ productName: string; price: number; quantity: number }>;
+  lineItems: Array<{ productName: string; price: number; quantity: number; selectedWeight?: string | null; brewingEquipment?: string | null }>;
   orderId: string;
   orderNumber: string;
   paymentId: string;
@@ -185,7 +209,11 @@ async function sendOrderConfirmation({
 
   const subtotal = lineItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const itemLines = lineItems
-    .map((i) => `${i.productName} x${i.quantity} - ₹${i.price * i.quantity}`)
+    .map((i) => {
+      const opts = [i.selectedWeight, i.brewingEquipment].filter(Boolean).join(", ");
+      const suffix = opts ? ` (${opts})` : "";
+      return `${i.productName}${suffix} x${i.quantity} - ₹${i.price * i.quantity}`;
+    })
     .join("\n");
 
   await transporter.sendMail({

@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { name, slug, category, price, regularPrice, shortDescription, description,
-          weight, roast, blend, ean, notes, tags, images, inStock, featured, visible } = body;
+          weight, roast, blend, ean, notes, tags, images, inStock, featured, visible,
+          weightOptions, brewingEquipmentOptions } = body;
 
   if (!name || !slug || !category || !price) {
     return NextResponse.json({ error: "name, slug, category, price are required" }, { status: 400 });
@@ -41,6 +42,8 @@ export async function POST(req: NextRequest) {
     featured: Boolean(featured),
     visible: visible === undefined ? true : Boolean(visible),
     ean: ean ?? null,
+    weightOptions: JSON.stringify(Array.isArray(weightOptions) ? weightOptions : []),
+    brewingEquipmentOptions: JSON.stringify(Array.isArray(brewingEquipmentOptions) ? brewingEquipmentOptions : []),
   }).returning();
 
   revalidatePath("/");

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { type Product } from "@/types";
-import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 import { ShoppingBag } from "lucide-react";
+import { formatPriceDisplay, requiresOptionSelection } from "@/lib/productOptions";
 
 interface Props {
   products: Product[];
@@ -53,14 +53,26 @@ export function FeaturedProducts({ products }: Props) {
                   </div>
                 </Link>
                 <div className="px-5 pb-5 flex items-center justify-between flex-shrink-0">
-                  <span className="font-medium text-[#1A0E08]">{formatPrice(product.price)}</span>
-                  <button
-                    onClick={() => addItem(product)}
-                    className="flex items-center gap-2 bg-[#1A0E08] text-[#F7F0E6] text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#4A2512] transition-colors"
-                  >
-                    <ShoppingBag size={12} />
-                    Add
-                  </button>
+                  <span className="font-medium text-[#1A0E08]">
+                    {formatPriceDisplay(product.price, product.weightOptions ?? [])}
+                  </span>
+                  {requiresOptionSelection(product.category, product.weightOptions ?? [], product.brewingEquipmentOptions ?? []) ? (
+                    <Link
+                      href={`/shop/${product.slug}`}
+                      className="flex items-center gap-2 bg-[#1A0E08] text-[#F7F0E6] text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#4A2512] transition-colors"
+                    >
+                      <ShoppingBag size={12} />
+                      Select
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => addItem(product)}
+                      className="flex items-center gap-2 bg-[#1A0E08] text-[#F7F0E6] text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#4A2512] transition-colors"
+                    >
+                      <ShoppingBag size={12} />
+                      Add
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

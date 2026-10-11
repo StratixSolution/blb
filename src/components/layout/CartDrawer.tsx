@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { X, Plus, Minus, Trash2 } from "lucide-react";
-import { useCartStore } from "@/store/cart";
+import { useCartStore, lineKey, unitPrice } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
 
 export function CartDrawer() {
@@ -50,42 +50,51 @@ export function CartDrawer() {
             </div>
           ) : (
             <ul className="space-y-5">
-              {items.map(({ product, quantity }) => (
-                <li key={product.id} className="flex gap-4">
-                  <div className="w-16 h-16 rounded bg-[#EAD9C8] overflow-hidden flex-shrink-0">
-                    <Image
-                      src={product.images[0]}
-                      alt={product.name}
-                      width={64}
-                      height={64}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#1A0E08] leading-tight">{product.name}</p>
-                    <p className="text-xs text-[#8B5E3C] mt-0.5">{product.weight}</p>
-                    <p className="text-sm font-medium text-[#4A2512] mt-1">{formatPrice(product.price)}</p>
-                  </div>
-                  <div className="flex flex-col items-end justify-between gap-2">
-                    <button
-                      onClick={() => removeItem(product.id)}
-                      className="text-[#8B5E3C] hover:text-red-600 transition-colors"
-                      aria-label="Remove item"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <div className="flex items-center gap-2 border border-[#D4C4B0] rounded px-2 py-1">
-                      <button onClick={() => updateQuantity(product.id, quantity - 1)} aria-label="Decrease quantity">
-                        <Minus size={12} />
-                      </button>
-                      <span className="text-xs w-4 text-center">{quantity}</span>
-                      <button onClick={() => updateQuantity(product.id, quantity + 1)} aria-label="Increase quantity">
-                        <Plus size={12} />
-                      </button>
+              {items.map((item) => {
+                const { product, quantity, selectedWeight, selectedEquipment } = item;
+                const key = lineKey(item);
+                // Prefer selected weight; fall back to the product's static weight.
+                const weightLabel = selectedWeight ?? product.weight;
+                return (
+                  <li key={key} className="flex gap-4">
+                    <div className="w-16 h-16 rounded bg-[#EAD9C8] overflow-hidden flex-shrink-0">
+                      <Image
+                        src={product.images[0]}
+                        alt={product.name}
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                  </div>
-                </li>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#1A0E08] leading-tight">{product.name}</p>
+                      {weightLabel && <p className="text-xs text-[#8B5E3C] mt-0.5">{weightLabel}</p>}
+                      {selectedEquipment && (
+                        <p className="text-xs text-[#8B5E3C] mt-0.5">Brewing: {selectedEquipment}</p>
+                      )}
+                      <p className="text-sm font-medium text-[#4A2512] mt-1">{formatPrice(unitPrice(item))}</p>
+                    </div>
+                    <div className="flex flex-col items-end justify-between gap-2">
+                      <button
+                        onClick={() => removeItem(key)}
+                        className="text-[#8B5E3C] hover:text-red-600 transition-colors"
+                        aria-label="Remove item"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                      <div className="flex items-center gap-2 border border-[#D4C4B0] rounded px-2 py-1">
+                        <button onClick={() => updateQuantity(key, quantity - 1)} aria-label="Decrease quantity">
+                          <Minus size={12} />
+                        </button>
+                        <span className="text-xs w-4 text-center">{quantity}</span>
+                        <button onClick={() => updateQuantity(key, quantity + 1)} aria-label="Increase quantity">
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

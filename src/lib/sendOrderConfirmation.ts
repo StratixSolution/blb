@@ -27,7 +27,11 @@ export async function sendOrderConfirmation({
 
   const total = lineItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const itemLines = lineItems
-    .map((i) => `${i.productName} x${i.quantity} - ₹${i.price * i.quantity}`)
+    .map((i) => {
+      const opts = [i.selectedWeight, i.brewingEquipment].filter(Boolean).join(", ");
+      const suffix = opts ? ` (${opts})` : "";
+      return `${i.productName}${suffix} x${i.quantity} - ₹${i.price * i.quantity}`;
+    })
     .join("\n");
 
   await transporter.sendMail({

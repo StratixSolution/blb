@@ -59,7 +59,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
       return {
         idx: i + 1,
         name: item.productName,
-        weight: product?.weight ?? "",
+        // Prefer the customer-selected weight (ground coffee); fall back to the
+        // product's static weight.
+        weight: item.selectedWeight ?? product?.weight ?? "",
         ean: product?.ean ?? "",
         qty: item.quantity,
         mrp: item.price,

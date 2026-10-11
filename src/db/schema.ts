@@ -43,6 +43,11 @@ export const orderItems = sqliteTable("order_items", {
   productName: text("product_name").notNull(),
   price: real("price").notNull(),
   quantity: integer("quantity").notNull(),
+  // Customer-selected options (currently only used for ground coffee).
+  // `selectedWeight` records the chosen weight variant label; the variant's
+  // price is already reflected in `price`. `brewingEquipment` is informational.
+  selectedWeight: text("selected_weight"),
+  brewingEquipment: text("brewing_equipment"),
 }, (t) => ({
   orderIdIdx: index("idx_order_items_order_id").on(t.orderId),
 }));
@@ -92,6 +97,13 @@ export const products = sqliteTable("products", {
   tags: text("tags").notNull().default("[]"),
   inStock: integer("in_stock", { mode: "boolean" }).notNull().default(true),
   weight: text("weight"),
+  // JSON array of selectable weight variants, e.g.
+  // [{"label":"250g","price":450},{"label":"500g","price":800}].
+  // Used for ground coffee: the selected variant's price overrides `price`.
+  weightOptions: text("weight_options").notNull().default("[]"),
+  // JSON array of selectable brewing-equipment option strings, e.g.
+  // ["French Press","Pour Over","Espresso"]. Used for ground coffee.
+  brewingEquipmentOptions: text("brewing_equipment_options").notNull().default("[]"),
   notes: text("notes").notNull().default("[]"),
   roast: text("roast"),
   blend: text("blend"),

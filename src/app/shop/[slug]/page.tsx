@@ -6,6 +6,7 @@ import { CartDrawer } from "@/components/layout/CartDrawer";
 import { ProductActions } from "@/components/shop/ProductActions";
 import { getProductBySlug, getAllProducts } from "@/lib/products";
 import { formatPrice } from "@/lib/utils";
+import { formatPriceDisplay } from "@/lib/productOptions";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -56,8 +57,10 @@ export default async function ProductPage({ params }: Props) {
               </p>
               <h1 className="font-serif text-2xl md:text-4xl text-[#1A0E08] mb-3">{product.name}</h1>
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-2xl font-medium text-[#1A0E08]">{formatPrice(product.price)}</span>
-                {product.regularPrice && (
+                <span className="text-2xl font-medium text-[#1A0E08]">
+                  {formatPriceDisplay(product.price, product.weightOptions ?? [])}
+                </span>
+                {product.regularPrice && !(product.weightOptions && product.weightOptions.length > 0) && (
                   <span className="text-base text-[#8B5E3C] line-through">{formatPrice(product.regularPrice)}</span>
                 )}
               </div>

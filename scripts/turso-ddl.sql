@@ -38,7 +38,9 @@ CREATE TABLE IF NOT EXISTS order_items (
   product_id INTEGER NOT NULL,
   product_name TEXT NOT NULL,
   price REAL NOT NULL,
-  quantity INTEGER NOT NULL
+  quantity INTEGER NOT NULL,
+  selected_weight TEXT,
+  brewing_equipment TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items (order_id);
@@ -87,6 +89,8 @@ CREATE TABLE IF NOT EXISTS products (
   tags TEXT NOT NULL DEFAULT '[]',
   in_stock INTEGER NOT NULL DEFAULT 1,
   weight TEXT,
+  weight_options TEXT NOT NULL DEFAULT '[]',
+  brewing_equipment_options TEXT NOT NULL DEFAULT '[]',
   notes TEXT NOT NULL DEFAULT '[]',
   roast TEXT,
   blend TEXT,

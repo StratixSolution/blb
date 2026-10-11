@@ -6,6 +6,7 @@ import { ShoppingBag } from "lucide-react";
 import { type Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
+import { formatPriceDisplay, requiresOptionSelection } from "@/lib/productOptions";
 
 interface Props {
   product: Product;
@@ -13,6 +14,12 @@ interface Props {
 
 export function ProductCard({ product }: Props) {
   const { addItem } = useCartStore();
+
+  const weightOptions = product.weightOptions ?? [];
+  const equipmentOptions = product.brewingEquipmentOptions ?? [];
+  // Ground coffee with configured options must be chosen on the product page,
+  // so the card links there instead of adding directly.
+  const needsSelection = requiresOptionSelection(product.category, weightOptions, equipmentOptions);
 
   return (
     <div className="group flex flex-col w-full bg-[#FAFAF8] border border-[#D4C4B0] overflow-hidden hover:shadow-md transition-shadow">
@@ -44,18 +51,28 @@ export function ProductCard({ product }: Props) {
       </Link>
       <div className="px-5 pb-5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-[#1A0E08]">{formatPrice(product.price)}</span>
-          {product.regularPrice && (
+          <span className="font-medium text-[#1A0E08]">{formatPriceDisplay(product.price, weightOptions)}</span>
+          {product.regularPrice && weightOptions.length === 0 && (
             <span className="text-xs text-[#8B5E3C] line-through">{formatPrice(product.regularPrice)}</span>
           )}
         </div>
-        <button
-          onClick={() => addItem(product)}
-          className="flex items-center gap-2 bg-[#1A0E08] text-[#F7F0E6] text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#4A2512] transition-colors"
-        >
-          <ShoppingBag size={12} />
-          Add
-        </button>
+        {needsSelection ? (
+          <Link
+            href={`/shop/${product.slug}`}
+            className="flex items-center gap-2 bg-[#1A0E08] text-[#F7F0E6] text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#4A2512] transition-colors"
+          >
+            <ShoppingBag size={12} />
+            Select
+          </Link>
+        ) : (
+          <button
+            onClick={() => addItem(product)}
+            className="flex items-center gap-2 bg-[#1A0E08] text-[#F7F0E6] text-[10px] uppercase tracking-widest px-4 py-2 hover:bg-[#4A2512] transition-colors"
+          >
+            <ShoppingBag size={12} />
+            Add
+          </button>
+        )}
       </div>
     </div>
   );

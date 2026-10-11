@@ -66,7 +66,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <tbody>
             {items.map((item) => (
               <tr key={item.id} className="border-b border-gray-800/50">
-                <td className="py-2.5 text-gray-200">{item.productName}</td>
+                <td className="py-2.5 text-gray-200">
+                  {item.productName}
+                  {(item.selectedWeight || item.brewingEquipment) && (
+                    <span className="block text-xs text-gray-500 mt-0.5">
+                      {[item.selectedWeight, item.brewingEquipment].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </td>
                 <td className="py-2.5 text-right text-gray-400">{item.quantity}</td>
                 <td className="py-2.5 text-right text-gray-400">₹{item.price.toLocaleString("en-IN")}</td>
                 <td className="py-2.5 text-right text-gray-200">₹{(item.price * item.quantity).toLocaleString("en-IN")}</td>

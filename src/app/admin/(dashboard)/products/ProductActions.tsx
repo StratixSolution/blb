@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CATEGORIES, getCategory } from "@/lib/categories";
+import { GROUND_COFFEE_CATEGORY, BREWING_EQUIPMENT_CATALOG, parseWeightOptions, parseEquipmentOptions, type WeightOption } from "@/lib/productOptions";
 
 interface DbProduct {
   id: number;
@@ -18,6 +19,8 @@ interface DbProduct {
   tags: string;
   notes: string;
   weight: string | null;
+  weightOptions: string | null;
+  brewingEquipmentOptions: string | null;
   roast: string | null;
   blend: string | null;
   inStock: number | boolean;
@@ -44,12 +47,18 @@ interface ProductFormData {
   featured: boolean;
   visible: boolean;
   images: string[];
+  // Ground-coffee selectable options. Weight options use string prices in the
+  // form for easy editing; brewing equipment is a selected subset of the catalog.
+  weightOptions: Array<{ label: string; price: string }>;
+  brewingEquipmentOptions: string[];
 }
 
 const EMPTY_FORM: ProductFormData = {
   name: "", slug: "", category: CATEGORIES[0]?.slug ?? "", price: "", regularPrice: "",
   shortDescription: "", description: "", weight: "", roast: "", blend: "", ean: "",
   notes: "", tags: "", inStock: true, featured: false, visible: true, images: [],
+  // New products default to offering all brewing equipment.
+  weightOptions: [], brewingEquipmentOptions: [...BREWING_EQUIPMENT_CATALOG],
 };
 
 function toForm(p: DbProduct): ProductFormData {
@@ -62,6 +71,14 @@ function toForm(p: DbProduct): ProductFormData {
     tags: (JSON.parse(p.tags || "[]") as string[]).join(", "),
     inStock: Boolean(p.inStock), featured: Boolean(p.featured), visible: Boolean(p.visible),
     images: JSON.parse(p.images || "[]") as string[],
+    weightOptions: parseWeightOptions(p.weightOptions).map((w) => ({ label: w.label, price: String(w.price) })),
+    // Keep only catalog values; if none stored yet, default to all.
+    brewingEquipmentOptions: (() => {
+      const stored = parseEquipmentOptions(p.brewingEquipmentOptions).filter((e) =>
+        (BREWING_EQUIPMENT_CATALOG as readonly string[]).includes(e)
+      );
+      return stored.length > 0 ? stored : [...BREWING_EQUIPMENT_CATALOG];
+    })(),
   };
 }
 
@@ -187,6 +204,32 @@ function ProductModal({
     blend: activeCat ? activeCat.showBlend : true,
     notes: activeCat ? activeCat.showNotes : true,
   };
+  // Selectable options are only configurable for ground coffee.
+  const isGroundCoffee = form.category === GROUND_COFFEE_CATEGORY;
+
+  function addWeightRow() {
+    setForm((f) => ({ ...f, weightOptions: [...f.weightOptions, { label: "", price: "" }] }));
+  }
+  function updateWeightRow(idx: number, key: "label" | "price", value: string) {
+    setForm((f) => ({
+      ...f,
+      weightOptions: f.weightOptions.map((w, i) => (i === idx ? { ...w, [key]: value } : w)),
+    }));
+  }
+  function removeWeightRow(idx: number) {
+    setForm((f) => ({ ...f, weightOptions: f.weightOptions.filter((_, i) => i !== idx) }));
+  }
+  function toggleEquipment(value: string) {
+    setForm((f) => ({
+      ...f,
+      brewingEquipmentOptions: f.brewingEquipmentOptions.includes(value)
+        ? f.brewingEquipmentOptions.filter((e) => e !== value)
+        : [...f.brewingEquipmentOptions, value],
+    }));
+  }
+  function setAllEquipment(all: boolean) {
+    setForm((f) => ({ ...f, brewingEquipmentOptions: all ? [...BREWING_EQUIPMENT_CATALOG] : [] }));
+  }
 
   function set<K extends keyof ProductFormData>(field: K, value: ProductFormData[K]) {
     setForm((f) => {
@@ -198,6 +241,26 @@ function ProductModal({
 
   async function save() {
     if (!form.name || !form.price) { setError("Name and price are required."); return; }
+
+    // Normalize + validate ground-coffee weight options.
+    let weightOptions: WeightOption[] = [];
+    if (isGroundCoffee) {
+      const rows = form.weightOptions
+        .map((w) => ({ label: w.label.trim(), price: Number(w.price) }))
+        .filter((w) => w.label !== "" || w.price);
+      for (const w of rows) {
+        if (!w.label || !Number.isFinite(w.price) || w.price < 0) {
+          setError("Each weight option needs a label and a valid price.");
+          return;
+        }
+      }
+      weightOptions = rows;
+    }
+    // Preserve catalog order and keep only valid catalog values.
+    const brewingEquipmentOptions = isGroundCoffee
+      ? BREWING_EQUIPMENT_CATALOG.filter((e) => form.brewingEquipmentOptions.includes(e))
+      : [];
+
     setSaving(true);
     setError("");
 
@@ -213,6 +276,8 @@ function ProductModal({
       notes: splitComma(show.notes ? form.notes : ""),
       tags: splitComma(form.tags),
       ean: form.ean.trim() || null,
+      weightOptions,
+      brewingEquipmentOptions,
     };
 
     const url = editId ? `/api/admin/products/${editId}` : "/api/admin/products";
@@ -322,6 +387,95 @@ function ProductModal({
               <input className={inputCls} value={form.tags} onChange={(e) => set("tags", e.target.value)} placeholder="arabica, filter coffee" />
             </div>
           </div>
+
+          {isGroundCoffee && (
+            <div className="border border-gray-800 rounded p-4 space-y-4 bg-gray-900/40">
+              <p className="text-amber-400/90 text-xs uppercase tracking-wider font-semibold">Ground Coffee Options</p>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className={labelCls + " mb-0"}>Weight Options (shown as a dropdown; price per weight)</label>
+                  <button
+                    type="button"
+                    onClick={addWeightRow}
+                    className="text-amber-400 hover:text-amber-300 text-xs border border-amber-600/50 rounded px-2 py-0.5"
+                  >
+                    + Add weight
+                  </button>
+                </div>
+                {form.weightOptions.length === 0 ? (
+                  <p className="text-gray-500 text-xs">No weight options. Add at least one for customers to choose from.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {form.weightOptions.map((w, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input
+                          className={inputCls + " flex-1"}
+                          value={w.label}
+                          onChange={(e) => updateWeightRow(i, "label", e.target.value)}
+                          placeholder="e.g. 250g"
+                        />
+                        <div className="relative w-32">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                          <input
+                            className={inputCls + " pl-7"}
+                            type="number"
+                            value={w.price}
+                            onChange={(e) => updateWeightRow(i, "price", e.target.value)}
+                            placeholder="price"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeWeightRow(i)}
+                          className="text-red-400 hover:text-red-300 text-sm px-2"
+                          title="Remove"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-gray-500 text-xs mt-1">The selected weight&apos;s price is charged. The shop shows a price range when multiple weights exist.</p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className={labelCls + " mb-0"}>Brewing Equipment (shown as a dropdown on the product page)</label>
+                  <div className="flex items-center gap-2 text-xs">
+                    <button type="button" onClick={() => setAllEquipment(true)} className="text-amber-400 hover:text-amber-300">Select all</button>
+                    <span className="text-gray-600">·</span>
+                    <button type="button" onClick={() => setAllEquipment(false)} className="text-gray-400 hover:text-gray-200">Clear</button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {BREWING_EQUIPMENT_CATALOG.map((item) => {
+                    const checked = form.brewingEquipmentOptions.includes(item);
+                    return (
+                      <button
+                        type="button"
+                        key={item}
+                        onClick={() => toggleEquipment(item)}
+                        aria-pressed={checked}
+                        className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                          checked
+                            ? "bg-amber-600/20 border-amber-500 text-amber-200"
+                            : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500"
+                        }`}
+                      >
+                        <span className={`inline-block w-3 h-3 rounded-sm border ${checked ? "bg-amber-500 border-amber-500" : "border-gray-500"}`} />
+                        {item}
+                      </button>
+                    );
+                  })}
+                </div>
+                {form.brewingEquipmentOptions.length === 0 && (
+                  <p className="text-amber-400/80 text-xs mt-1.5">No equipment selected — the Brewing Equipment dropdown won&apos;t show on this product.</p>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-6">
             <label className="flex items-center gap-2 cursor-pointer">

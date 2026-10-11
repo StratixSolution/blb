@@ -1,6 +1,11 @@
 // Category is now a dynamic slug referencing the `categories` table.
 export type ProductCategory = string;
 
+export interface WeightOption {
+  label: string;
+  price: number;
+}
+
 export interface Product {
   id: number;
   slug: string;
@@ -24,11 +29,19 @@ export interface Product {
   notes?: string[];
   roast?: string;
   blend?: string;
+  // Admin-configured selectable options for ground coffee.
+  weightOptions?: WeightOption[];
+  brewingEquipmentOptions?: string[];
 }
 
 export interface CartItem {
   product: Product;
   quantity: number;
+  // Customer-selected options (ground coffee only).
+  selectedWeight?: string;
+  // Unit price for the chosen weight variant; overrides product.price when set.
+  selectedWeightPrice?: number;
+  selectedEquipment?: string;
 }
 
 export interface Order {

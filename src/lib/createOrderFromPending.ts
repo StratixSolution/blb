@@ -37,8 +37,14 @@ export async function createOrderFromPending(
     return { success: false, error: "Pending order not found" };
   }
 
-  const lineItems: Array<{ productId: number; productName: string; price: number; quantity: number }> =
-    JSON.parse(pending.itemsJson);
+  const lineItems: Array<{
+    productId: number;
+    productName: string;
+    price: number;
+    quantity: number;
+    selectedWeight?: string | null;
+    brewingEquipment?: string | null;
+  }> = JSON.parse(pending.itemsJson);
   const total = pending.amountPaise / 100;
 
   const orderNumber = await generateOrderNumber();
@@ -71,6 +77,8 @@ export async function createOrderFromPending(
       productName: i.productName,
       price: i.price,
       quantity: i.quantity,
+      selectedWeight: i.selectedWeight ?? null,
+      brewingEquipment: i.brewingEquipment ?? null,
     }))
   );
 

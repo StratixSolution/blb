@@ -3,6 +3,7 @@ import Razorpay from "razorpay";
 import { db } from "@/db/client";
 import { products, coupons, pendingOrders } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
+import { resolveLineOptions } from "@/lib/productOptions";
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { items, couponCode, customer, attribution } = body as {
-      items: Array<{ productId: number; quantity: number }>;
+      items: Array<{ productId: number; quantity: number; selectedWeight?: string | null; selectedEquipment?: string | null }>;
       couponCode?: string | null;
       customer?: Record<string, string>;
       attribution?: Record<string, string>;
@@ -30,7 +31,14 @@ export async function POST(req: NextRequest) {
     const productMap = new Map(dbProducts.map((p) => [p.id, p]));
 
     let subtotal = 0;
-    const lineItems: Array<{ productId: number; productName: string; price: number; quantity: number }> = [];
+    const lineItems: Array<{
+      productId: number;
+      productName: string;
+      price: number;
+      quantity: number;
+      selectedWeight: string | null;
+      brewingEquipment: string | null;
+    }> = [];
 
     for (const item of items) {
       const product = productMap.get(item.productId);
@@ -40,9 +48,23 @@ export async function POST(req: NextRequest) {
       if (!product.inStock) {
         return NextResponse.json({ error: `${product.name} is out of stock` }, { status: 400 });
       }
+      const resolved = resolveLineOptions(product, {
+        selectedWeight: item.selectedWeight,
+        selectedEquipment: item.selectedEquipment,
+      });
+      if ("error" in resolved) {
+        return NextResponse.json({ error: resolved.error }, { status: 400 });
+      }
       const qty = Math.max(1, Math.floor(item.quantity));
-      subtotal += product.price * qty;
-      lineItems.push({ productId: product.id, productName: product.name, price: product.price, quantity: qty });
+      subtotal += resolved.unitPrice * qty;
+      lineItems.push({
+        productId: product.id,
+        productName: product.name,
+        price: resolved.unitPrice,
+        quantity: qty,
+        selectedWeight: resolved.selectedWeight,
+        brewingEquipment: resolved.brewingEquipment,
+      });
     }
 
     // Validate coupon server-side

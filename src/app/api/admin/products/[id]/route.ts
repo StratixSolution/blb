@@ -31,6 +31,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.featured !== undefined) updates.featured = Boolean(body.featured);
   if (body.visible !== undefined) updates.visible = Boolean(body.visible);
   if (body.ean !== undefined) updates.ean = body.ean || null;
+  if (body.weightOptions !== undefined) updates.weightOptions = JSON.stringify(Array.isArray(body.weightOptions) ? body.weightOptions : []);
+  if (body.brewingEquipmentOptions !== undefined) updates.brewingEquipmentOptions = JSON.stringify(Array.isArray(body.brewingEquipmentOptions) ? body.brewingEquipmentOptions : []);
 
   const [row] = await db.update(products).set(updates).where(eq(products.id, Number(id))).returning();
 

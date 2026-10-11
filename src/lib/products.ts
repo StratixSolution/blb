@@ -4,6 +4,12 @@ import { and, eq } from "drizzle-orm";
 import type { Product } from "@/types";
 import { getCategory, getCategoryLabel } from "./categories";
 import { slugify } from "./utils";
+import {
+  GROUND_COFFEE_CATEGORY,
+  BREWING_EQUIPMENT_CATALOG,
+  parseWeightOptions,
+  parseEquipmentOptions,
+} from "./productOptions";
 
 function toProduct(row: typeof productsTable.$inferSelect): Product {
   const cat = getCategory(row.category);
@@ -11,6 +17,17 @@ function toProduct(row: typeof productsTable.$inferSelect): Product {
   const showRoast = cat ? cat.showRoast : true;
   const showBlend = cat ? cat.showBlend : true;
   const showNotes = cat ? cat.showNotes : true;
+  // Selectable options only apply to ground coffee.
+  const isGroundCoffee = row.category === GROUND_COFFEE_CATEGORY;
+  const weightOptions = isGroundCoffee ? parseWeightOptions(row.weightOptions) : [];
+  // Ground coffee defaults to the full brewing-equipment catalog when none is
+  // explicitly configured, so the dropdown shows all options by default.
+  const storedEquipment = isGroundCoffee ? parseEquipmentOptions(row.brewingEquipmentOptions) : [];
+  const brewingEquipmentOptions = isGroundCoffee
+    ? storedEquipment.length > 0
+      ? storedEquipment
+      : [...BREWING_EQUIPMENT_CATALOG]
+    : [];
   return {
     id: row.id,
     slug: row.slug,
@@ -34,6 +51,8 @@ function toProduct(row: typeof productsTable.$inferSelect): Product {
     notes: showNotes && row.notes ? (JSON.parse(row.notes) as string[]) : undefined,
     roast: showRoast ? (row.roast ?? undefined) : undefined,
     blend: showBlend ? (row.blend ?? undefined) : undefined,
+    weightOptions: weightOptions.length > 0 ? weightOptions : undefined,
+    brewingEquipmentOptions: brewingEquipmentOptions.length > 0 ? brewingEquipmentOptions : undefined,
   };
 }
 
