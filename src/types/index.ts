@@ -1,7 +1,5 @@
-export type ProductCategory =
-  | "ground-coffee"
-  | "whole-bean"
-  | "instant-premix";
+// Category is now a dynamic slug referencing the `categories` table.
+export type ProductCategory = string;
 
 export interface Product {
   id: number;
@@ -10,6 +8,12 @@ export interface Product {
   shortDescription: string;
   description: string;
   category: ProductCategory;
+  // Resolved display label + field-visibility flags for the product's category.
+  categoryLabel?: string;
+  showWeight?: boolean;
+  showRoast?: boolean;
+  showBlend?: boolean;
+  showNotes?: boolean;
   price: number;
   regularPrice?: number;
   images: string[];

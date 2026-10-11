@@ -33,12 +33,8 @@ export function ProductCard({ product }: Props) {
         </div>
         <div className="p-5 flex-1">
           <p className="text-[9px] uppercase tracking-widest text-[#8B5E3C] mb-1">
-            {product.category === "ground-coffee"
-              ? "Ground Coffee"
-              : product.category === "whole-bean"
-              ? "Whole Bean"
-              : "Instant Premix"}{" "}
-            · {product.weight}
+            {product.categoryLabel ?? product.category}
+            {product.weight ? ` · ${product.weight}` : ""}
           </p>
           <h3 className="font-serif text-base text-[#1A0E08] mb-1">{product.name}</h3>
           <p className="text-xs text-[#8B5E3C] leading-relaxed line-clamp-2">

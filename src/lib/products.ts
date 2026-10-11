@@ -2,26 +2,38 @@ import { db } from "@/db/client";
 import { products as productsTable } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import type { Product } from "@/types";
+import { getCategory, getCategoryLabel } from "./categories";
 import { slugify } from "./utils";
 
 function toProduct(row: typeof productsTable.$inferSelect): Product {
+  const cat = getCategory(row.category);
+  const showWeight = cat ? cat.showWeight : true;
+  const showRoast = cat ? cat.showRoast : true;
+  const showBlend = cat ? cat.showBlend : true;
+  const showNotes = cat ? cat.showNotes : true;
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
     shortDescription: row.shortDescription,
     description: row.description,
-    category: row.category as Product["category"],
+    category: row.category,
+    categoryLabel: getCategoryLabel(row.category),
+    showWeight,
+    showRoast,
+    showBlend,
+    showNotes,
     price: row.price,
     regularPrice: row.regularPrice ?? undefined,
     images: JSON.parse(row.images) as string[],
     tags: JSON.parse(row.tags) as string[],
     inStock: Boolean(row.inStock),
     visible: Boolean(row.visible),
-    weight: row.weight ?? undefined,
-    notes: row.notes ? (JSON.parse(row.notes) as string[]) : undefined,
-    roast: row.roast ?? undefined,
-    blend: row.blend ?? undefined,
+    // Only expose coffee-specific fields when the category allows them.
+    weight: showWeight ? (row.weight ?? undefined) : undefined,
+    notes: showNotes && row.notes ? (JSON.parse(row.notes) as string[]) : undefined,
+    roast: showRoast ? (row.roast ?? undefined) : undefined,
+    blend: showBlend ? (row.blend ?? undefined) : undefined,
   };
 }
 

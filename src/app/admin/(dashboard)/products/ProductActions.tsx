@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { CATEGORIES, getCategory } from "@/lib/categories";
 
 interface DbProduct {
   id: number;
@@ -46,7 +47,7 @@ interface ProductFormData {
 }
 
 const EMPTY_FORM: ProductFormData = {
-  name: "", slug: "", category: "ground-coffee", price: "", regularPrice: "",
+  name: "", slug: "", category: CATEGORIES[0]?.slug ?? "", price: "", regularPrice: "",
   shortDescription: "", description: "", weight: "", roast: "", blend: "", ean: "",
   notes: "", tags: "", inStock: true, featured: false, visible: true, images: [],
 };
@@ -169,9 +170,23 @@ function ProductModal({
   editId?: number;
 }) {
   const router = useRouter();
-  const [form, setForm] = useState<ProductFormData>(initial);
+  const [form, setForm] = useState<ProductFormData>(() => ({
+    ...initial,
+    // Default new products to the first available category.
+    category: initial.category || CATEGORIES[0]?.slug || "",
+  }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Field-visibility flags come from the selected category. Unknown categories
+  // fall back to showing everything.
+  const activeCat = getCategory(form.category);
+  const show = {
+    weight: activeCat ? activeCat.showWeight : true,
+    roast: activeCat ? activeCat.showRoast : true,
+    blend: activeCat ? activeCat.showBlend : true,
+    notes: activeCat ? activeCat.showNotes : true,
+  };
 
   function set<K extends keyof ProductFormData>(field: K, value: ProductFormData[K]) {
     setForm((f) => {
@@ -190,7 +205,12 @@ function ProductModal({
       ...form,
       price: Number(form.price),
       regularPrice: form.regularPrice ? Number(form.regularPrice) : null,
-      notes: splitComma(form.notes),
+      // Clear fields the selected category does not use so stale coffee data
+      // doesn't linger on e.g. merchandise products.
+      weight: show.weight ? form.weight : "",
+      roast: show.roast ? form.roast : "",
+      blend: show.blend ? form.blend : "",
+      notes: splitComma(show.notes ? form.notes : ""),
       tags: splitComma(form.tags),
       ean: form.ean.trim() || null,
     };
@@ -236,9 +256,13 @@ function ProductModal({
             <div>
               <label className={labelCls}>Category *</label>
               <select className={inputCls} value={form.category} onChange={(e) => set("category", e.target.value)}>
-                <option value="ground-coffee">Ground Coffee</option>
-                <option value="whole-bean">Whole Bean</option>
-                <option value="instant-premix">Instant Premix</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c.slug} value={c.slug}>{c.name}</option>
+                ))}
+                {/* Preserve an unknown category so editing doesn't silently change it */}
+                {form.category && !getCategory(form.category) && (
+                  <option value={form.category}>{form.category}</option>
+                )}
               </select>
             </div>
             <div>
@@ -262,18 +286,24 @@ function ProductModal({
           </div>
 
           <div className="grid grid-cols-4 gap-4">
-            <div>
-              <label className={labelCls}>Weight</label>
-              <input className={inputCls} value={form.weight} onChange={(e) => set("weight", e.target.value)} placeholder="e.g. 250g" />
-            </div>
-            <div>
-              <label className={labelCls}>Roast</label>
-              <input className={inputCls} value={form.roast} onChange={(e) => set("roast", e.target.value)} placeholder="e.g. Medium-Dark" />
-            </div>
-            <div>
-              <label className={labelCls}>Blend</label>
-              <input className={inputCls} value={form.blend} onChange={(e) => set("blend", e.target.value)} placeholder="e.g. 100% Pure Coffee" />
-            </div>
+            {show.weight && (
+              <div>
+                <label className={labelCls}>Weight</label>
+                <input className={inputCls} value={form.weight} onChange={(e) => set("weight", e.target.value)} placeholder="e.g. 250g" />
+              </div>
+            )}
+            {show.roast && (
+              <div>
+                <label className={labelCls}>Roast</label>
+                <input className={inputCls} value={form.roast} onChange={(e) => set("roast", e.target.value)} placeholder="e.g. Medium-Dark" />
+              </div>
+            )}
+            {show.blend && (
+              <div>
+                <label className={labelCls}>Blend</label>
+                <input className={inputCls} value={form.blend} onChange={(e) => set("blend", e.target.value)} placeholder="e.g. 100% Pure Coffee" />
+              </div>
+            )}
             <div>
               <label className={labelCls}>EAN Barcode</label>
               <input className={inputCls} value={form.ean} onChange={(e) => set("ean", e.target.value)} placeholder="e.g. 0745604911184" />
@@ -281,10 +311,12 @@ function ProductModal({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>Tasting Notes (comma-separated)</label>
-              <input className={inputCls} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Caramel, Chocolate" />
-            </div>
+            {show.notes && (
+              <div>
+                <label className={labelCls}>Tasting Notes (comma-separated)</label>
+                <input className={inputCls} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Caramel, Chocolate" />
+              </div>
+            )}
             <div>
               <label className={labelCls}>Tags (comma-separated)</label>
               <input className={inputCls} value={form.tags} onChange={(e) => set("tags", e.target.value)} placeholder="arabica, filter coffee" />

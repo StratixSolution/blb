@@ -1,31 +1,35 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { type Product, type ProductCategory } from "@/types";
+import { type Product } from "@/types";
 import { ProductCard } from "./ProductCard";
 
 interface Props {
   products: Product[];
 }
 
-const categories: { label: string; value: ProductCategory | "all" }[] = [
-  { label: "All", value: "all" },
-  { label: "Ground Coffee", value: "ground-coffee" },
-  { label: "Whole Bean", value: "whole-bean" },
-  { label: "Instant Premix", value: "instant-premix" },
-];
-
 export function ShopClient({ products }: Props) {
   const searchParams = useSearchParams();
-  const [active, setActive] = useState<ProductCategory | "all">("all");
 
-  useEffect(() => {
-    const cat = searchParams.get("category");
-    if (cat && categories.find((c) => c.value === cat)) {
-      setActive(cat as ProductCategory | "all");
+  // Build the filter list from the categories actually present in the catalog,
+  // preserving first-seen order.
+  const categories = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const p of products) {
+      if (!seen.has(p.category)) seen.set(p.category, p.categoryLabel ?? p.category);
     }
-  }, [searchParams]);
+    return [
+      { label: "All", value: "all" },
+      ...Array.from(seen, ([value, label]) => ({ label, value })),
+    ];
+  }, [products]);
+
+  // Honour an initial ?category= from the URL, then let clicks override it.
+  const urlCategory = searchParams.get("category");
+  const initialActive =
+    urlCategory && categories.some((c) => c.value === urlCategory) ? urlCategory : "all";
+  const [active, setActive] = useState<string>(initialActive);
 
   const filtered = active === "all" ? products : products.filter((p) => p.category === active);
 

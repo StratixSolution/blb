@@ -1,19 +1,11 @@
 import { db } from "@/db/client";
 import { products } from "@/db/schema";
-import { and, or, like, eq, sql } from "drizzle-orm";
+import { and, or, like, eq } from "drizzle-orm";
 import Image from "next/image";
 import Link from "next/link";
 import { AddProductButton, EditProductButton, DeleteProductButton, ToggleStockButton, ToggleVisibilityButton } from "./ProductActions";
 import { SearchInput } from "../_components/SearchInput";
-
-const CATEGORY_TABS = [
-  { key: "all",             label: "All" },
-  { key: "ground-coffee",   label: "Ground Coffee" },
-  { key: "whole-bean",      label: "Whole Bean" },
-  { key: "instant-premix",  label: "Instant Premix" },
-] as const;
-
-type CategoryKey = (typeof CATEGORY_TABS)[number]["key"];
+import { CATEGORIES, getCategoryLabel } from "@/lib/categories";
 
 const STOCK_OPTIONS = [
   { key: "all",    label: "All Stock" },
@@ -30,16 +22,17 @@ export default async function ProductsPage({
 }) {
   const { q, category: categoryParam, stock: stockParam } = await searchParams;
 
-  const activeCategory: CategoryKey =
+  const CATEGORY_TABS = [
+    { key: "all", label: "All" },
+    ...CATEGORIES.map((c) => ({ key: c.slug, label: c.name })),
+  ];
+
+  const activeCategory: string =
     CATEGORY_TABS.find((t) => t.key === categoryParam)?.key ?? "all";
   const activeStock: StockKey =
     STOCK_OPTIONS.find((t) => t.key === stockParam)?.key ?? "all";
   const search = q?.trim() || undefined;
 
-  const categoryFilter =
-    activeCategory !== "all"
-      ? eq(products.category, activeCategory as "ground-coffee" | "whole-bean" | "instant-premix")
-      : undefined;
   const stockFilter =
     activeStock === "in"  ? eq(products.inStock, true)  :
     activeStock === "out" ? eq(products.inStock, false) :
@@ -48,15 +41,20 @@ export default async function ProductsPage({
     ? or(like(products.name, `%${search}%`), like(products.slug, `%${search}%`))
     : undefined;
 
-  const [rows, categoryCounts] = await Promise.all([
-    db.select().from(products).where(and(categoryFilter, stockFilter, searchFilter)),
-    db.select({ category: products.category, count: sql<number>`count(*)` })
-      .from(products)
-      .groupBy(products.category),
-  ]);
+  // Category filtering/counting is done in-memory on normalized slugs so that
+  // legacy slugs (e.g. "ground-coffee") map onto the new hardcoded categories.
+  const allMatching = await db.select().from(products).where(and(stockFilter, searchFilter));
 
-  const totalProductCount = categoryCounts.reduce((s, r) => s + Number(r.count), 0);
-  const categoryCount = Object.fromEntries(categoryCounts.map((r) => [r.category, Number(r.count)]));
+  const rows =
+    activeCategory === "all"
+      ? allMatching
+      : allMatching.filter((r) => r.category === activeCategory);
+
+  const categoryCount: Record<string, number> = {};
+  for (const r of allMatching) {
+    categoryCount[r.category] = (categoryCount[r.category] ?? 0) + 1;
+  }
+  const totalProductCount = allMatching.length;
 
   // baseParams for SearchInput (preserves category + stock, not q or page)
   const baseParamsForSearch = new URLSearchParams();
@@ -186,7 +184,7 @@ export default async function ProductsPage({
                     </td>
                     <td className="px-5 py-3">
                       <span className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded">
-                        {CATEGORY_TABS.find((t) => t.key === product.category)?.label ?? product.category}
+                        {getCategoryLabel(product.category)}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-gray-200">

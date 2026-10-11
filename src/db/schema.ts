@@ -84,7 +84,8 @@ export const products = sqliteTable("products", {
   name: text("name").notNull(),
   shortDescription: text("short_description").notNull().default(""),
   description: text("description").notNull().default(""),
-  category: text("category", { enum: ["ground-coffee", "whole-bean", "instant-premix"] }).notNull(),
+  // Free-text category slug. Allowed values are defined in src/lib/categories.ts.
+  category: text("category").notNull(),
   price: real("price").notNull(),
   regularPrice: real("regular_price"),
   images: text("images").notNull().default("[]"),
