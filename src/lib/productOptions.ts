@@ -22,6 +22,10 @@ export const BREWING_EQUIPMENT_CATALOG = [
   "Moka Pot",
   "Turkish",
   "Cold Brew",
+  "Chemex",
+  "Drip",
+  "Percolator",
+  "Channi",
 ] as const;
 
 export interface WeightOption {
