@@ -43,3 +43,30 @@ body {
   background: var(--gold);
   color: var(--espresso);
 }
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  width: max-content;
+  animation: marquee 13.3s linear infinite;
+  will-change: transform;
+}
+
+.hover\:pause-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}

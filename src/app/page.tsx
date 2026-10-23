@@ -7,6 +7,7 @@ import { BrandStory } from "@/components/home/BrandStory";
 import { PremixStrip } from "@/components/home/PremixStrip";
 import { VideoQuote } from "@/components/home/VideoQuote";
 import { Testimonials } from "@/components/home/Testimonials";
+import { PartnerMarquee } from "@/components/home/PartnerMarquee";
 import { getFeaturedProducts, getProductsByCategory } from "@/lib/products";
 
 export default async function HomePage() {
@@ -26,6 +27,7 @@ export default async function HomePage() {
         <PremixStrip products={premixes} />
         <VideoQuote />
         <Testimonials />
+        <PartnerMarquee />
       </main>
       <Footer />
     </>
