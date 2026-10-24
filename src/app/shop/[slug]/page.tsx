@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { CartDrawer } from "@/components/layout/CartDrawer";
 import { ProductActions } from "@/components/shop/ProductActions";
+import { ProductImageGallery } from "@/components/shop/ProductImageGallery";
 import { getProductBySlug, getAllProducts } from "@/lib/products";
 import { formatPrice } from "@/lib/utils";
 import { formatPriceDisplay } from "@/lib/productOptions";
@@ -39,16 +39,7 @@ export default async function ProductPage({ params }: Props) {
       <main className="min-h-screen bg-[#F7F0E6] pt-20">
         <div className="max-w-7xl mx-auto px-6 py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-start">
-            <div className="relative aspect-square bg-[#EAD9C8] overflow-hidden">
-              <Image
-                src={product.images[0]}
-                alt={product.name}
-                fill
-                className="object-contain p-6"
-                sizes="(max-width: 768px) 100vw, 50vw"
-                priority
-              />
-            </div>
+            <ProductImageGallery images={product.images} productName={product.name} />
 
             <div className="md:sticky md:top-28">
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#8B5E3C] mb-3">
